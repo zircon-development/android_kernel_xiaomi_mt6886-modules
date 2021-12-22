@@ -1415,6 +1415,23 @@ UINT32 mtk_wcn_consys_wakeup_btif_irq_pull_low(VOID)
 	return 1;
 }
 
+INT32 mtk_wcn_consys_get_debug_reg_ary_size(VOID)
+{
+	if (wmt_consys_ic_ops == NULL)
+		wmt_consys_ic_ops = mtk_wcn_get_consys_ic_ops();
+	if (wmt_consys_ic_ops && wmt_consys_ic_ops->consys_ic_get_debug_reg_ary_size)
+		return *(wmt_consys_ic_ops->consys_ic_get_debug_reg_ary_size);
+	return 0;
+}
+P_REG_MAP_ADDR mtk_wcn_consys_get_debug_reg_ary(VOID)
+{
+	if (wmt_consys_ic_ops == NULL)
+		wmt_consys_ic_ops = mtk_wcn_get_consys_ic_ops();
+	if (wmt_consys_ic_ops && wmt_consys_ic_ops->consys_ic_get_debug_reg_ary)
+		return wmt_consys_ic_ops->consys_ic_get_debug_reg_ary;
+	return NULL;
+}
+
 struct platform_device *get_consys_device(void)
 {
 	return g_pdev;
