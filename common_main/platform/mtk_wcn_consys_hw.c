@@ -661,6 +661,9 @@ INT32 mtk_wcn_consys_hw_reg_ctrl(UINT32 on, UINT32 co_clock_type)
 
 	if (on) {
 		WMT_PLAT_PR_DBG("++\n");
+		if (wmt_consys_ic_ops->consys_ic_cr_remapping)
+			wmt_consys_ic_ops->consys_ic_cr_remapping(1);
+
 		if (wmt_consys_ic_ops->consys_ic_reset_emi_coredump)
 			wmt_consys_ic_ops->consys_ic_reset_emi_coredump(pEmibaseaddr);
 
@@ -768,6 +771,9 @@ INT32 mtk_wcn_consys_hw_reg_ctrl(UINT32 on, UINT32 co_clock_type)
 
 		if (wmt_consys_ic_ops->consys_ic_hw_vcn18_ctrl)
 			wmt_consys_ic_ops->consys_ic_hw_vcn18_ctrl(DISABLE);
+
+		if (wmt_consys_ic_ops->consys_ic_cr_remapping)
+			wmt_consys_ic_ops->consys_ic_cr_remapping(0);
 	}
 	WMT_PLAT_PR_INFO("CONSYS-HW-REG-CTRL(0x%08x),finish\n", on);
 	return iRet;
@@ -1400,6 +1406,13 @@ PVOID mtk_wcn_consys_clock_get_regmap(VOID)
 	if (wmt_consys_ic_ops->consys_ic_clock_get_regmap)
 		return wmt_consys_ic_ops->consys_ic_clock_get_regmap();
 	return NULL;
+}
+
+UINT32 mtk_wcn_consys_wakeup_btif_status(VOID)
+{
+	if (wmt_consys_ic_ops->consys_ic_wakeup_btif_status)
+		return wmt_consys_ic_ops->consys_ic_wakeup_btif_status();
+	return 1;
 }
 
 struct platform_device *get_consys_device(void)
