@@ -56,6 +56,7 @@
 #endif
 #endif
 #include <linux/proc_fs.h>
+#include <linux/thermal.h>
 #include <mtk_wcn_cmb_stub.h>
 #include "osal_typedef.h"
 #include "osal.h"
@@ -622,6 +623,9 @@ LONG wmt_dev_tm_temp_query(VOID)
 	INT32 index = 0;
 	LONG return_temp = 0;
 	INT8 query_cond = 0;
+
+	if (gWmtClose != 0)
+		return THERMAL_TEMP_INVALID;
 
 	/* Let us work on the copied version of function static variables */
 	osal_lock_unsleepable_lock(&g_temp_query_spinlock);

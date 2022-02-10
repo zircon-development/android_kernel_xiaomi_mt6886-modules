@@ -326,8 +326,13 @@ static int wmt_allocate_connsys_emi_by_lk2(struct platform_device *pdev)
 
 static int wmt_thermal_get_temp_cb(void *data, int *temp)
 {
+	int temp_tm = 0;
+
 	if (temp) {
-		*temp = wmt_lib_tm_temp_query() * 1000;
+		temp_tm = wmt_lib_tm_temp_query();
+		if (temp_tm != THERMAL_TEMP_INVALID)
+			temp_tm = temp_tm * 1000;
+		*temp = temp_tm;
 		WMT_PLAT_PR_INFO("thermal = %d\n", *temp);
 	}
 	return 0;
