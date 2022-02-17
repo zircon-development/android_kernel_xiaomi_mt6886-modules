@@ -14,6 +14,11 @@
 #include "gps/gps_cfg_on.h"
 #include "gps/gps_aon_top.h"
 
+#if GPS_DL_HAS_PTA
+#include "conn_infra/conn_uart_pta.h"
+#include "conn_infra/conn_pta6.h"
+#endif
+
 #define GDL_HW_SUPPORT_LIST "SUPPORT:MT6885,MT6893"
 
 #define GDL_HW_CHECK_CONN_INFRA_VER(p_poll_okay, p_poll_ver)             \
