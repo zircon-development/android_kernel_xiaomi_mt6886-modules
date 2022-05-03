@@ -24,6 +24,14 @@
  *			    D A T A   T Y P E S
  ******************************************************************************/
 
+/*
+ * When CONFIG_OF is not set, for_each_property_of_node() is not defined,
+ * we need to define it to avoid build break.
+ */
+#ifndef CONFIG_OF
+#define for_each_property_of_node(dn, pp) \
+	for (pp = dn->properties; pp != NULL; pp = pp->next)
+#endif
 
 /*******************************************************************************
  *		    F U N C T I O N   D E C L A R A T I O N S
