@@ -271,6 +271,13 @@ static int cfm_cfg_parse(struct connfem_context *ctx,
 
 	while (offset < data->size) {
 		tlv = (struct cfm_cfg_tlv *) (data->data + offset);
+		if (offset + sizeof(struct cfm_cfg_tlv) + tlv->length > data->size) {
+			pr_info("%s,[WARN] tlv->length > data->size (%zu>%zu)",
+				__func__,
+				(offset + sizeof(struct cfm_cfg_tlv) + tlv->length),
+				data->size);
+			return -EINVAL;
+		}
 		pr_info("%s, tag:%hu,len:%hu,offset:%u",
 				__func__,
 				tlv->tag,
