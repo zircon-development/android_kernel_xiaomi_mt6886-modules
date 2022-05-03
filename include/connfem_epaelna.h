@@ -21,13 +21,13 @@ struct cfm_epaelna_flags_config {
 	 */
 	void *obj;
 
-	/* ConnFem Container for flags names buffer management */
-	struct cfm_container *names;
+	/* ConnFem Container for list of flags & values defined in dts */
+	struct cfm_container *pairs;
 
-	/* String pointers to each of the flags name entry.
-	 * Size of array can be retrieved by names->cnt
+	/* String pointers to each of the flags name/value pair.
+	 * Size of array can be retrieved by pairs->cnt
 	 */
-	char **name_entries;
+	char **pair_entries;
 };
 
 struct cfm_epaelna_pin_config {
@@ -48,6 +48,7 @@ struct cfm_epaelna_config {
 /*******************************************************************************
  *			    P U B L I C   D A T A
  ******************************************************************************/
+extern struct connfem_epaelna_subsys_cb cfm_cm_epaelna_cb;
 extern struct connfem_epaelna_subsys_cb cfm_wf_epaelna_cb;
 extern struct connfem_epaelna_subsys_cb cfm_bt_epaelna_cb;
 
@@ -85,11 +86,7 @@ extern void cfm_epaelna_flags_dump(enum connfem_subsys subsys,
 extern void cfm_epaelna_flags_obj_dump(enum connfem_subsys subsys,
 				       void *flags_obj);
 
-extern void cfm_epaelna_flags_names_dump(enum connfem_subsys subsys,
-					 struct cfm_container *names);
-
-extern void cfm_epaelna_flags_name_entries_dump(enum connfem_subsys subsys,
-						unsigned int cnt,
-						char **name_entries);
+extern void cfm_epaelna_flags_pairs_dump(enum connfem_subsys subsys,
+					 struct cfm_container *pairs);
 
 #endif /* __CONNFEM_EPAELNA_H__ */

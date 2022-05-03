@@ -24,6 +24,7 @@ enum CONNFEM_CFG {
 	CONNFEM_CFG_FEMID	= 2,
 	CONNFEM_CFG_PIN_INFO	= 3,
 	CONNFEM_CFG_FLAGS_BT	= 4,
+	CONNFEM_CFG_FLAGS_CM	= 5,
 	CONNFEM_CFG_NUM
 };
 
@@ -43,6 +44,8 @@ static int cfm_cfg_parse_femid(struct cfm_epaelna_config *cfg,
 static int cfm_cfg_parse_pin_info(struct cfm_epaelna_config *cfg,
 					struct cfm_cfg_tlv *tlv);
 static int cfm_cfg_parse_flags_bt(struct connfem_context *ctx,
+					struct cfm_cfg_tlv *tlv);
+static int cfm_cfg_parse_flags_cm(struct connfem_context *ctx,
 					struct cfm_cfg_tlv *tlv);
 static int cfm_cfg_parse(struct connfem_context *ctx,
 					const struct firmware *data);
@@ -245,6 +248,35 @@ static int cfm_cfg_parse_flags_bt(struct connfem_context *ctx,
 }
 
 /**
+ * cfm_cfg_parse_flags_cm
+ *	Parse common flags from config file
+ *
+ * Parameters
+ *	ctx : Pointer to connfem context
+ *	tlv	: Pointer to tlv data containing common flags
+ *
+ * Return value
+ *	0	: Success
+ *	-EINVAL	: Error
+ *
+ */
+static int cfm_cfg_parse_flags_cm(struct connfem_context *ctx,
+				struct cfm_cfg_tlv *tlv)
+{
+	if (tlv->length != sizeof(struct connfem_epaelna_flags_common)) {
+		pr_info("[WARN] flags common length (%d) should be (%zu)",
+				tlv->length,
+				sizeof(struct connfem_epaelna_flags_common));
+		return -EINVAL;
+	}
+
+	memcpy(&ctx->cfg.cfm_cfg_flags_cm, tlv->data, tlv->length);
+	ctx->epaelna.flags_cfg[CONNFEM_SUBSYS_NONE].obj = &ctx->cfg.cfm_cfg_flags_cm;
+
+	return 0;
+}
+
+/**
  * cfm_cfg_parse
  *	Parse config file
  *
@@ -289,6 +321,9 @@ static int cfm_cfg_parse(struct connfem_context *ctx,
 			break;
 		case CONNFEM_CFG_FLAGS_BT:
 			ret = cfm_cfg_parse_flags_bt(ctx, tlv);
+			break;
+		case CONNFEM_CFG_FLAGS_CM:
+			ret = cfm_cfg_parse_flags_cm(ctx, tlv);
 			break;
 		default:
 			pr_info("%s, unknown tag = %d",

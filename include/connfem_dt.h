@@ -11,21 +11,22 @@
  ******************************************************************************/
 /* ConnFem Device Tree Node/Parameter Names */
 #define CFM_DT_NODE_EPAELNA		"epa_elna"
-#define CFM_DT_NODE_EPAELNA_MTK		"epa_elna_mtk"
+#define CFM_DT_NODE_EPAELNA_MTK	"epa_elna_mtk"
+#define CFM_DT_NODE_COMMON		"common"
 #define CFM_DT_NODE_WIFI		"wifi"
 #define CFM_DT_NODE_BT			"bt"
 #define CFM_DT_PROP_PARTS		"parts"
 #define CFM_DT_NODE_HWID		"hwid"
 #define CFM_DT_PROP_GPIO		"gpio"
 #define CFM_DT_NODE_PMIC		"pmic"
-#define CFM_DT_PROP_CHANNEL_NAME	"channel_name"
+#define CFM_DT_PROP_CHANNEL_NAME		"channel_name"
 #define CFM_DT_PROP_IO_CHANNEL_NAMES	"io-channel-names"
 #define CFM_DT_PROP_RANGE_PREFIX	"range-"
 #define CFM_DT_PROP_FLAGS_PREFIX	"flags-"
 #define CFM_DT_PROP_PINCTRL_PREFIX	"pinctrl-"
 #define CFM_DT_PROP_PINMUX		"pinmux"
 #define CFM_DT_PROP_MAPPING		"mapping"
-#define CFM_DT_PROP_LAA_PINMUX		"laa-pinmux"
+#define CFM_DT_PROP_LAA_PINMUX	"laa-pinmux"
 
 #define CFM_DT_PARTS_NOFEM		"nofem"
 

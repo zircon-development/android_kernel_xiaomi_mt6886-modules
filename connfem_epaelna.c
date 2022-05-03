@@ -61,7 +61,7 @@ static struct connfem_epaelna_flag_tbl_entry*
  *			    P U B L I C   D A T A
  ******************************************************************************/
 char *cfm_subsys_name[CONNFEM_SUBSYS_NUM] = {
-	/* [CONNFEM_SUBSYS_NONE] */ NULL,
+	/* [CONNFEM_SUBSYS_NONE] */ CFM_DT_NODE_COMMON,
 	/* [CONNFEM_SUBSYS_WIFI] */ CFM_DT_NODE_WIFI,
 	/* [CONNFEM_SUBSYS_BT]   */ CFM_DT_NODE_BT
 };
@@ -92,7 +92,7 @@ static int fem_id_shift[CONNFEM_PORT_NUM][FEMID_ITEMS] = {
 };
 
 static struct connfem_epaelna_subsys_cb *subsys_cb[CONNFEM_SUBSYS_NUM] = {
-	/* [CONNFEM_SUBSYS_NONE] */ NULL,
+	/* [CONNFEM_SUBSYS_NONE] */ &cfm_cm_epaelna_cb,
 	/* [CONNFEM_SUBSYS_WIFI] */ &cfm_wf_epaelna_cb,
 	/* [CONNFEM_SUBSYS_BT]   */ &cfm_bt_epaelna_cb
 };
@@ -127,14 +127,9 @@ void cfm_epaelna_flags_free(struct cfm_epaelna_flags_config *flags)
 	if (!flags)
 		return;
 
-	if (flags->name_entries) {
-		cfm_container_entries_free((void **)flags->name_entries);
-		flags->name_entries = NULL;
-	}
-
-	if (flags->names) {
-		cfm_container_free(flags->names);
-		flags->names = NULL;
+	if (flags->pairs) {
+		cfm_container_free(flags->pairs);
+		flags->pairs = NULL;
 	}
 }
 
@@ -499,20 +494,11 @@ int cfm_epaelna_flags_populate(
 
 		err = cfm_epaelna_flags_subsys_populate(dt_flags->np[s],
 							tbl,
-							&result[s].names);
+							&result[s].pairs);
 		if (err < 0)
 			break;
 
-		result[s].name_entries = (char **)cfm_container_entries(
-							result[s].names);
-
-		if (result[s].names && (result[s].names->cnt > 0) &&
-		    !result[s].name_entries) {
-			err = -ENOMEM;
-			break;
-		}
-
-		cfm_epaelna_flags_names_dump(s, result[s].names);
+		cfm_epaelna_flags_pairs_dump(s, result[s].pairs);
 
 		result[s].obj = subsys_cb[s]->flags_get();
 		if (!result[s].obj) {
@@ -541,7 +527,7 @@ int cfm_epaelna_flags_populate(
  * cfm_epaelna_flags_subsys_populate
  *	Function traverses through all props in the give subsys' flags node,
  *	and updates subsys' flags structure through mapping table,
- *	and collect flag names into the ConnFem container.
+ *	and collect flag name/value pairs into the ConnFem container.
  *
  *	On success, the container will be allocated, caller needs to release it
  *	via cfm_container_free().
@@ -549,7 +535,7 @@ int cfm_epaelna_flags_populate(
  * Parameters
  *	np	  : Pointer to subsys' flags device tree node
  *	tbl	  : Pointer to subsys' flags mapping table
- *	result_out: Pointer to ConnFem container for storing flags names
+ *	result_out: Pointer to ConnFem container for storing flags name/value
  *
  * Return value
  *	0	: Success, result output will be valid
@@ -565,14 +551,15 @@ static int cfm_epaelna_flags_subsys_populate(
 	struct property *prop = NULL;
 	struct connfem_epaelna_flag_tbl_entry *entry;
 	struct cfm_container *result = NULL;
+	struct connfem_epaelna_flag_pair *pair;
 
-	/* Prepare flags names container storage */
+	/* Prepare flags pairs container storage */
 	i = 0;
 	for_each_property_of_node(np, prop) {
 		i++;
 	}
 
-	result = cfm_container_alloc(i, CONNFEM_FLAG_NAME_SIZE);
+	result = cfm_container_alloc(i, sizeof(struct connfem_epaelna_flag_pair));
 	if (!result)
 		return -ENOMEM;
 
@@ -599,22 +586,34 @@ static int cfm_epaelna_flags_subsys_populate(
 		}
 
 		/* Double check if container is big enough to keep this flag */
-		if (i + 1 <= result->cnt) {
-			memcpy(cfm_container_entry(result, i),
-			       prop->name,
-			       len);
-
-			/* Update subsys' flags table only if all else ok.
-			 * No need to check for NULL, as already done at:
-			 * cfm_epaelna_flags_subsys_find.
-			 */
-			*(entry->addr) = true;
-
-			i++;
-		} else {
+		pair = cfm_container_entry(result, i);
+		if (i >= result->cnt || !pair) {
 			pr_info("[ERR] Drop '%s' prop, too many flags %d > %d",
 				prop->name, i + 1, result->cnt);
+			continue;
 		}
+
+		/* Update subsys' flags value */
+		if (prop->length == 0) {
+			/* always enable boolean flag */
+			*(entry->addr) = true;
+
+		} else if (prop->length == 1 && prop->value) {
+			/* assign the specified 1 byte value */
+			*(entry->addr) = *((unsigned char*)prop->value);
+
+		} else {
+			/* skip property with multi-bytes value */
+			pr_info("[WARN] Drop '%s' prop, multi-bytes(%d) value unsupported",
+				prop->name,
+				prop->length);
+			continue;
+		}
+
+		/* Update subsys' flags container entry */
+		memcpy(pair->name, prop->name, len);
+		pair->value = *(entry->addr);
+		i++;
 	}
 
 	/* Updates container size, the end result could be smaller,
@@ -631,7 +630,7 @@ static int cfm_epaelna_flags_subsys_populate(
  * connfem_epaelna_flag_tbl_entry
  *	Function traverses through all props in the give subsys' flags node,
  *	and updates subsys' flags structure through mapping table,
- *	and collect flag names into the ConnFem container.
+ *	and collect flag name/value pairs into the ConnFem container.
  *
  *	On success, the container will be allocated, caller needs to release it
  *	via cfm_container_free().
@@ -806,9 +805,7 @@ void cfm_epaelna_laainfo_dump(struct connfem_epaelna_laa_pin_info *laa)
 void cfm_epaelna_flags_dump(enum connfem_subsys subsys,
 			    struct cfm_epaelna_flags_config *flags)
 {
-	unsigned int cnt = 0;
-
-	if (subsys <= CONNFEM_SUBSYS_NONE || subsys >= CONNFEM_SUBSYS_NUM)
+	if (subsys < CONNFEM_SUBSYS_NONE || subsys >= CONNFEM_SUBSYS_NUM)
 		return;
 
 	if (!flags) {
@@ -818,16 +815,13 @@ void cfm_epaelna_flags_dump(enum connfem_subsys subsys,
 
 	cfm_epaelna_flags_obj_dump(subsys, flags->obj);
 
-	cfm_epaelna_flags_names_dump(subsys, flags->names);
-
-	if (flags->names)
-		cnt = flags->names->cnt;
-	cfm_epaelna_flags_name_entries_dump(subsys, cnt, flags->name_entries);
+	cfm_epaelna_flags_pairs_dump(subsys, flags->pairs);
 }
 
 void cfm_epaelna_flags_obj_dump(enum connfem_subsys subsys,
 				void *flags_obj)
 {
+	struct connfem_epaelna_flags_common *cm_flags = NULL;
 	struct connfem_epaelna_flags_wifi *wf_flags = NULL;
 	struct connfem_epaelna_flags_bt *bt_flags = NULL;
 
@@ -837,6 +831,15 @@ void cfm_epaelna_flags_obj_dump(enum connfem_subsys subsys,
 	}
 
 	switch (subsys) {
+	case CONNFEM_SUBSYS_NONE:
+		cm_flags = (struct connfem_epaelna_flags_common *)flags_obj;
+		pr_info("CmFlags.rxmode: 0x%02x", cm_flags->rxmode);
+		pr_info("CmFlags.fe_ant_cnt: 0x%02x", cm_flags->fe_ant_cnt);
+		pr_info("CmFlags.fe_main_bt_share_lp2g: 0x%02x", cm_flags->fe_main_bt_share_lp2g);
+		pr_info("CmFlags.fe_conn_spdt: 0x%02x", cm_flags->fe_conn_spdt);
+		pr_info("CmFlags.fe_reserved: 0x%02x", cm_flags->fe_reserved);
+		break;
+
 	case CONNFEM_SUBSYS_WIFI:
 		wf_flags = (struct connfem_epaelna_flags_wifi *)flags_obj;
 		pr_info("WfFlags.open_loop: %d", wf_flags->open_loop);
@@ -856,44 +859,28 @@ void cfm_epaelna_flags_obj_dump(enum connfem_subsys subsys,
 	}
 }
 
-void cfm_epaelna_flags_names_dump(enum connfem_subsys subsys,
-				  struct cfm_container *names)
+void cfm_epaelna_flags_pairs_dump(enum connfem_subsys subsys,
+				  struct cfm_container *pairs)
 {
 	int i;
+	struct connfem_epaelna_flag_pair *pair;
 
-	if (!names) {
-		pr_info("[%s]FlagNames, (null)", cfm_subsys_name[subsys]);
+	if (!pairs) {
+		pr_info("[%s]FlagPairs, (null)", cfm_subsys_name[subsys]);
 		return;
 	}
 
-	pr_info("[%s]FlagNames, count:%d, entry_sz:%d",
-		cfm_subsys_name[subsys], names->cnt, names->entry_sz);
+	pr_info("[%s]FlagPairs, count:%d, entry_sz:%d",
+		cfm_subsys_name[subsys], pairs->cnt, pairs->entry_sz);
 
-	for (i = 0; i < names->cnt; i++) {
-		pr_info("[%s]FlagNames, [%d]'%s'",
+	for (i = 0; i < pairs->cnt; i++) {
+		pair = (struct connfem_epaelna_flag_pair*)
+			cfm_container_entry(pairs, i);
+
+		pr_info("[%s]FlagPairs, [%d]'%s':0x%02x",
 			cfm_subsys_name[subsys],
 			i,
-			(char *)cfm_container_entry(names, i));
-	}
-}
-
-void cfm_epaelna_flags_name_entries_dump(enum connfem_subsys subsys,
-					 unsigned int cnt,
-					 char **name_entries)
-{
-	int i;
-
-	if (!name_entries) {
-		pr_info("[%s]FlagNameEntries, (null)", cfm_subsys_name[subsys]);
-		return;
-	}
-
-	pr_info("[%s]FlagNameEntries, count:%d", cfm_subsys_name[subsys], cnt);
-
-	for (i = 0; i < cnt; i++) {
-		pr_info("[%s]FlagNameEntries, [%d]'%s'",
-			cfm_subsys_name[subsys],
-			i,
-			(char *)name_entries[i]);
+			pair->name,
+			pair->value);
 	}
 }

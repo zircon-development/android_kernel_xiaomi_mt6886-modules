@@ -141,7 +141,7 @@ EXPORT_SYMBOL(connfem_epaelna_laa_get_pin_info);
 
 int connfem_epaelna_get_flags(enum connfem_subsys subsys, void *flags)
 {
-	if (subsys <= CONNFEM_SUBSYS_NONE || subsys >= CONNFEM_SUBSYS_NUM) {
+	if (subsys < CONNFEM_SUBSYS_NONE || subsys >= CONNFEM_SUBSYS_NUM) {
 		pr_info("[WARN] %s, invalid subsys %d",
 			__func__, subsys);
 		return -EINVAL;
@@ -164,6 +164,11 @@ int connfem_epaelna_get_flags(enum connfem_subsys subsys, void *flags)
 	}
 
 	switch (subsys) {
+	case CONNFEM_SUBSYS_NONE:
+		memcpy(flags, connfem_ctx->epaelna.flags_cfg[subsys].obj,
+		       sizeof(struct connfem_epaelna_flags_common));
+		break;
+
 	case CONNFEM_SUBSYS_WIFI:
 		memcpy(flags, connfem_ctx->epaelna.flags_cfg[subsys].obj,
 		       sizeof(struct connfem_epaelna_flags_wifi));
@@ -186,42 +191,3 @@ int connfem_epaelna_get_flags(enum connfem_subsys subsys, void *flags)
 }
 EXPORT_SYMBOL(connfem_epaelna_get_flags);
 
-int connfem_epaelna_get_flags_names(enum connfem_subsys subsys,
-			unsigned int *num_flags, char ***names)
-{
-	if (subsys <= CONNFEM_SUBSYS_NONE || subsys >= CONNFEM_SUBSYS_NUM) {
-		pr_info("[WARN] %s, invalid subsys %d",
-			__func__, subsys);
-		return -EINVAL;
-	}
-
-	if (!num_flags || !names) {
-		pr_info("[WARN] %s, input parameter is NULL, (%p, %p)",
-			__func__, num_flags, names);
-		return -EINVAL;
-	}
-
-	*num_flags = 0;
-	*names = NULL;
-
-	if (!connfem_ctx) {
-		pr_info("[WARN] %s, No ConnFem context", __func__);
-		return -EOPNOTSUPP;
-	}
-
-	if (!connfem_ctx->epaelna.flags_cfg[subsys].names ||
-	    !connfem_ctx->epaelna.flags_cfg[subsys].name_entries) {
-		pr_info("[WARN] %s, subsys %d '%s' names is NULL",
-			__func__, subsys, cfm_subsys_name[subsys]);
-		return -EINVAL;
-	}
-
-	*num_flags = connfem_ctx->epaelna.flags_cfg[subsys].names->cnt;
-	*names = connfem_ctx->epaelna.flags_cfg[subsys].name_entries;
-
-	pr_info("GetFlagsNames");
-	cfm_epaelna_flags_name_entries_dump(subsys, *num_flags, *names);
-
-	return 0;
-}
-EXPORT_SYMBOL(connfem_epaelna_get_flags_names);

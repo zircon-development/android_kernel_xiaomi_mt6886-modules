@@ -39,10 +39,10 @@ struct connfem_epaelna_subsys_cb cfm_bt_epaelna_cb = {
 static struct connfem_epaelna_flags_bt bt_epaelna_flags;
 
 static struct connfem_epaelna_flag_tbl_entry bt_epaelna_flags_map[] = {
-	{"bypass",	&bt_epaelna_flags.bypass},
-	{"epa_elna",	&bt_epaelna_flags.epa_elna},
-	{"epa",		&bt_epaelna_flags.epa},
-	{"elna",	&bt_epaelna_flags.elna},
+	{"bypass",	(unsigned char*)&bt_epaelna_flags.bypass},
+	{"epa_elna",	(unsigned char*)&bt_epaelna_flags.epa_elna},
+	{"epa",		(unsigned char*)&bt_epaelna_flags.epa},
+	{"elna",	(unsigned char*)&bt_epaelna_flags.elna},
 	{NULL, NULL}
 };
 

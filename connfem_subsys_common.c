@@ -12,7 +12,7 @@
 #ifdef pr_fmt
 #undef pr_fmt
 #endif
-#define pr_fmt(fmt) "["KBUILD_MODNAME"][WF]" fmt
+#define pr_fmt(fmt) "["KBUILD_MODNAME"][CM]" fmt
 
 /*******************************************************************************
  *			    D A T A   T Y P E S
@@ -22,37 +22,40 @@
 /*******************************************************************************
  *		    F U N C T I O N   D E C L A R A T I O N S
  ******************************************************************************/
-static void *wf_epaelna_flags_get(void);
-static struct connfem_epaelna_flag_tbl_entry *wf_epaelna_flags_tbl_get(void);
+static void *cm_epaelna_flags_get(void);
+static struct connfem_epaelna_flag_tbl_entry *cm_epaelna_flags_tbl_get(void);
 
 /*******************************************************************************
  *			    P U B L I C   D A T A
  ******************************************************************************/
-struct connfem_epaelna_subsys_cb cfm_wf_epaelna_cb = {
-	.flags_get = wf_epaelna_flags_get,
-	.flags_tbl_get = wf_epaelna_flags_tbl_get
+struct connfem_epaelna_subsys_cb cfm_cm_epaelna_cb = {
+	.flags_get = cm_epaelna_flags_get,
+	.flags_tbl_get = cm_epaelna_flags_tbl_get
 };
 
 /*******************************************************************************
  *			   P R I V A T E   D A T A
  ******************************************************************************/
-static struct connfem_epaelna_flags_wifi wf_epaelna_flags;
+static struct connfem_epaelna_flags_common cm_epaelna_flags;
 
-static struct connfem_epaelna_flag_tbl_entry wf_epaelna_flags_map[] = {
-	{"open-loop",	(unsigned char*)&wf_epaelna_flags.open_loop},
-	{"laa",		(unsigned char*)&wf_epaelna_flags.laa},
+static struct connfem_epaelna_flag_tbl_entry cm_epaelna_flags_map[] = {
+	{"rx-mode",	&cm_epaelna_flags.rxmode},
+	{"fe-ant-cnt",	&cm_epaelna_flags.fe_ant_cnt},
+	{"fe-main-bt-share-lp2g",	&cm_epaelna_flags.fe_main_bt_share_lp2g},
+	{"fe-conn-spdt",	&cm_epaelna_flags.fe_conn_spdt},
+	{"fe-reserved",	&cm_epaelna_flags.fe_reserved},
 	{NULL, NULL}
 };
 
 /*******************************************************************************
  *			      F U N C T I O N S
  ******************************************************************************/
-static void *wf_epaelna_flags_get(void)
+static void *cm_epaelna_flags_get(void)
 {
-	return &wf_epaelna_flags;
+	return &cm_epaelna_flags;
 }
 
-static struct connfem_epaelna_flag_tbl_entry *wf_epaelna_flags_tbl_get(void)
+static struct connfem_epaelna_flag_tbl_entry *cm_epaelna_flags_tbl_get(void)
 {
-	return wf_epaelna_flags_map;
+	return cm_epaelna_flags_map;
 }

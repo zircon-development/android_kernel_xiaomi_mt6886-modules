@@ -21,6 +21,7 @@
  ******************************************************************************/
 struct cfm_config {
 	struct connfem_epaelna_flags_bt cfm_cfg_flags_bt;
+	struct connfem_epaelna_flags_common cfm_cfg_flags_cm;
 };
 
 /*******************************************************************************
