@@ -14,6 +14,7 @@
 #include "connfem_container.h"
 #include "connfem_dt.h"
 #include "connfem_epaelna.h"
+#include "connfem_cfg.h"
 
 /*******************************************************************************
  *				M A C R O S
@@ -42,11 +43,19 @@
 /*******************************************************************************
  *			    D A T A   T Y P E S
  ******************************************************************************/
+enum cfm_src {
+	CFM_SRC_DEVICE_TREE = 0,
+	CFM_SRC_CFG_FILE = 1,
+	CFM_SRC_NUM
+};
+
 struct connfem_context {
 	unsigned int id;
 	struct platform_device *pdev;
 	struct cfm_dt_context dt;
 	struct cfm_epaelna_config epaelna;
+	struct cfm_config cfg;
+	enum cfm_src src;
 };
 
 struct cfm_ioc_is_available {

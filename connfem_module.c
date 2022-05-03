@@ -41,11 +41,12 @@ static int connfem_plat_probe(struct platform_device *pdev);
 static int connfem_plat_remove(struct platform_device *pdev);
 
 static long connfem_dev_unlocked_ioctl(struct file *filp, unsigned int cmd,
-				       unsigned long arg);
+					unsigned long arg);
 #ifdef CONFIG_COMPAT
 static long connfem_dev_compat_ioctl(struct file *filp, unsigned int cmd,
-				     unsigned long arg);
+					unsigned long arg);
 #endif
+
 /*******************************************************************************
  *			    P U B L I C   D A T A
  ******************************************************************************/
@@ -116,6 +117,7 @@ static const struct file_operations connfem_dev_fops = {
 /* Module Parameters */
 static unsigned int connfem_major;
 static unsigned int epa_elna_hwid = CFM_PARAM_EPAELNA_HWID_INVALID;
+static char *config_file;
 
 /*******************************************************************************
  *			      F U N C T I O N S
@@ -387,6 +389,11 @@ static int connfem_plat_probe(struct platform_device *pdev)
 	struct connfem_context *cfm = NULL;
 	int err = 0;
 
+	if (connfem_ctx && connfem_ctx->epaelna.available == true) {
+		pr_info("Config file parse done, no need to parse from device tree");
+		goto probe_end;
+	}
+
 	cfm = (struct connfem_context *)of_device_get_match_data(&pdev->dev);
 	if (!cfm) {
 		pr_info("Probe, missing platform device data for '%s'",
@@ -426,6 +433,8 @@ static int connfem_plat_probe(struct platform_device *pdev)
 		 *   // goto probe_end;
 		 */
 	}
+
+	cfm->src = CFM_SRC_DEVICE_TREE;
 
 	if (connfem_ctx) {
 		pr_info("Failed to register '%s' context, '%s' exists",
@@ -473,8 +482,13 @@ static int __init connfem_mod_init(void)
 
 	pr_info("Internal load: %d", connfem_is_internal());
 
+	cfm_cfg_process(config_file);
+
 	/* Init global context */
 	memset(&connfem_cdev_ctx, 0, sizeof(struct connfem_cdev_context));
+
+	if (connfem_ctx && connfem_ctx->epaelna.available == true)
+		connfem_cdev_ctx.cfm = connfem_ctx;
 
 	/* Platform device */
 	ret = platform_driver_register(&connfem_plat_drv);
@@ -578,3 +592,4 @@ MODULE_AUTHOR("Dennis Lin <dennis.lin@mediatek.com>");
 MODULE_AUTHOR("Brad Chou <brad.chou@mediatek.com>");
 module_param(connfem_major, uint, 0644);
 module_param(epa_elna_hwid, uint, 0644);
+module_param(config_file, charp, 0644);
