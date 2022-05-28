@@ -104,6 +104,7 @@ struct connfem_epaelna_flag_pair {
 struct connfem_epaelna_subsys_cb {
 	void*(*flags_get)(void);
 	struct connfem_epaelna_flag_tbl_entry*(*flags_tbl_get)(void);
+	unsigned int (*flags_cnt)(void);
 };
 
 /*******************************************************************************

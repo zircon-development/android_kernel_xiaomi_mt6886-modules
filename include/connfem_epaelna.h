@@ -16,6 +16,7 @@
  ******************************************************************************/
 struct cfm_epaelna_flags_config {
 	/* Pointer to the subsys specific flags data structure
+	 *	- common: struct connfem_epaelna_flags_common *
 	 *	- wifi: struct connfem_epaelna_flags_wifi *
 	 *	- bt  : struct connfem_epaelna_flags_bt *
 	 */
@@ -67,8 +68,9 @@ extern int cfm_epaelna_flags_populate(
 		struct cfm_dt_epaelna_flags_context *dt_flags,
 		struct cfm_epaelna_flags_config *result);
 
-extern void cfm_epaelna_config_free(struct cfm_epaelna_config *cfg,
-				    bool free_all);
+extern void cfm_epaelna_config_free(
+		struct cfm_epaelna_config *cfg,
+		bool free_all);
 
 extern void cfm_epaelna_flags_free(struct cfm_epaelna_flags_config *flags);
 
@@ -81,12 +83,19 @@ extern void cfm_epaelna_pininfo_dump(struct connfem_epaelna_pin_info *pin_info);
 extern void cfm_epaelna_laainfo_dump(struct connfem_epaelna_laa_pin_info *laa);
 
 extern void cfm_epaelna_flags_dump(enum connfem_subsys subsys,
-				   struct cfm_epaelna_flags_config *flags);
+		struct cfm_epaelna_flags_config *flags);
 
 extern void cfm_epaelna_flags_obj_dump(enum connfem_subsys subsys,
-				       void *flags_obj);
+		void *flags_obj);
 
 extern void cfm_epaelna_flags_pairs_dump(enum connfem_subsys subsys,
-					 struct cfm_container *pairs);
+		struct cfm_container *pairs);
+
+extern struct connfem_epaelna_flag_tbl_entry* cfm_epaelna_flags_subsys_find(
+		char *name,
+		struct connfem_epaelna_flag_tbl_entry *tbl);
+
+extern struct connfem_epaelna_subsys_cb *cfm_epaelna_flags_subsys_cb_get(
+		enum connfem_subsys subsys);
 
 #endif /* __CONNFEM_EPAELNA_H__ */

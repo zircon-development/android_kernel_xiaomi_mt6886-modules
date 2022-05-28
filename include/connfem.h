@@ -70,7 +70,6 @@ struct connfem_context {
 	struct platform_device *pdev;
 	struct cfm_dt_context dt;
 	struct cfm_epaelna_config epaelna;
-	struct cfm_config cfg;
 	enum cfm_src src;
 };
 

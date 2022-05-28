@@ -24,13 +24,15 @@
  ******************************************************************************/
 static void *bt_epaelna_flags_get(void);
 static struct connfem_epaelna_flag_tbl_entry *bt_epaelna_flags_tbl_get(void);
+static unsigned int bt_epaelna_flags_cnt(void);
 
 /*******************************************************************************
  *			    P U B L I C   D A T A
  ******************************************************************************/
 struct connfem_epaelna_subsys_cb cfm_bt_epaelna_cb = {
 	.flags_get = bt_epaelna_flags_get,
-	.flags_tbl_get = bt_epaelna_flags_tbl_get
+	.flags_tbl_get = bt_epaelna_flags_tbl_get,
+	.flags_cnt = bt_epaelna_flags_cnt
 };
 
 /*******************************************************************************
@@ -57,4 +59,10 @@ static void *bt_epaelna_flags_get(void)
 static struct connfem_epaelna_flag_tbl_entry *bt_epaelna_flags_tbl_get(void)
 {
 	return bt_epaelna_flags_map;
+}
+
+static unsigned int bt_epaelna_flags_cnt(void)
+{
+	return sizeof(bt_epaelna_flags_map) /
+		sizeof(struct connfem_epaelna_flag_tbl_entry) - 1;
 }

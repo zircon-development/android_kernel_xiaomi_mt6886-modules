@@ -52,11 +52,6 @@ static int cfm_epaelna_flags_subsys_populate(
 		struct connfem_epaelna_flag_tbl_entry *tbl,
 		struct cfm_container **result_out);
 
-static struct connfem_epaelna_flag_tbl_entry*
-	cfm_epaelna_flags_subsys_find(
-		char *name,
-		struct connfem_epaelna_flag_tbl_entry *tbl);
-
 /*******************************************************************************
  *			    P U B L I C   D A T A
  ******************************************************************************/
@@ -643,7 +638,7 @@ static int cfm_epaelna_flags_subsys_populate(
  *	Pointer to the subsys' flag table entry, or NULL if can't be found.
  *
  */
-static struct connfem_epaelna_flag_tbl_entry*
+struct connfem_epaelna_flag_tbl_entry*
 	cfm_epaelna_flags_subsys_find(
 		char *name,
 		struct connfem_epaelna_flag_tbl_entry *tbl)
@@ -657,6 +652,18 @@ static struct connfem_epaelna_flag_tbl_entry*
 	}
 	pr_info("Unsupported flag '%s'", name);
 	return NULL;
+}
+
+struct connfem_epaelna_subsys_cb*
+	cfm_epaelna_flags_subsys_cb_get(
+		enum connfem_subsys subsys)
+{
+	if (subsys >= CONNFEM_SUBSYS_NUM) {
+		pr_info("%s, invalid subsys = %d", __func__, subsys);
+		return NULL;
+	}
+
+	return subsys_cb[subsys];
 }
 
 void cfm_epaelna_config_dump(struct cfm_epaelna_config *cfg)

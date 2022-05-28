@@ -20,11 +20,14 @@
  *			    D A T A   T Y P E S
  ******************************************************************************/
 enum CONNFEM_CFG {
-	CONNFEM_CFG_ID		= 1,
-	CONNFEM_CFG_FEMID	= 2,
-	CONNFEM_CFG_PIN_INFO	= 3,
-	CONNFEM_CFG_FLAGS_BT	= 4,
-	CONNFEM_CFG_FLAGS_CM	= 5,
+	CONNFEM_CFG_ID			= 1,
+	CONNFEM_CFG_FEMID		= 2,
+	CONNFEM_CFG_PIN_INFO		= 3,
+	CONNFEM_CFG_FLAGS_BT		= 4,
+	CONNFEM_CFG_FLAGS_CM		= 5,
+	CONNFEM_CFG_FLAGS_WIFI		= 6,
+	CONNFEM_CFG_G_PART_NAME		= 7,
+	CONNFEM_CFG_A_PART_NAME		= 8,
 	CONNFEM_CFG_NUM
 };
 
@@ -43,12 +46,18 @@ static int cfm_cfg_parse_femid(struct cfm_epaelna_config *cfg,
 					struct cfm_cfg_tlv *tlv);
 static int cfm_cfg_parse_pin_info(struct cfm_epaelna_config *cfg,
 					struct cfm_cfg_tlv *tlv);
-static int cfm_cfg_parse_flags_bt(struct connfem_context *ctx,
-					struct cfm_cfg_tlv *tlv);
-static int cfm_cfg_parse_flags_cm(struct connfem_context *ctx,
+static int cfm_cfg_parse_flags(enum connfem_subsys subsys,
+					struct connfem_context *ctx,
 					struct cfm_cfg_tlv *tlv);
 static int cfm_cfg_parse(struct connfem_context *ctx,
 					const struct firmware *data);
+static int cfm_cfg_parse_flags_helper(int count,
+				struct connfem_epaelna_subsys_cb *subsys_cb,
+				struct cfm_cfg_tlv *tlv,
+				struct cfm_container **result_out);
+static int cfm_cfg_parse_part_name(enum connfem_rf_port port,
+				struct cfm_epaelna_config *cfg,
+				struct cfm_cfg_tlv *tlv);
 
 /*******************************************************************************
  *			    P U B L I C   D A T A
@@ -219,59 +228,93 @@ static int cfm_cfg_parse_pin_info(struct cfm_epaelna_config *cfg,
 }
 
 /**
- * cfm_cfg_parse_flags_bt
- *	Parse bt flags from config file
+ * cfm_cfg_parse_flags
+ *	Parse common/wifi/BT flags from config file
  *
  * Parameters
- *	ctx : Pointer to connfem context
- *	tlv	: Pointer to tlv data containing bt flags
+ *	subsys	: connfem_subsys
+ *	ctx		: Pointer to connfem context
+ *	tlv		: Pointer to tlv data containing common/wifi/BT flags
  *
  * Return value
  *	0	: Success
  *	-EINVAL	: Error
  *
  */
-static int cfm_cfg_parse_flags_bt(struct connfem_context *ctx,
+static int cfm_cfg_parse_flags(enum connfem_subsys subsys,
+				struct connfem_context *ctx,
 				struct cfm_cfg_tlv *tlv)
 {
-	if (tlv->length != sizeof(struct connfem_epaelna_flags_bt)) {
-		pr_info("[WARN] flags bt length (%d) should be (%zu)",
-				tlv->length,
-				sizeof(struct connfem_epaelna_flags_bt));
+	int err = 0;
+	struct connfem_epaelna_subsys_cb *subsys_cb = NULL;
+
+	if (tlv->length == 0 ) {
+		pr_info("[WARN] invalid flag pair length (%d)", tlv->length);
 		return -EINVAL;
 	}
 
-	memcpy(&ctx->cfg.cfm_cfg_flags_bt, tlv->data, tlv->length);
-	ctx->epaelna.flags_cfg[CONNFEM_SUBSYS_BT].obj = &ctx->cfg.cfm_cfg_flags_bt;
+	if ((tlv->length % sizeof(struct connfem_epaelna_flag_pair)) != 0) {
+		pr_info("[WARN] flag pair length needs to be multiple of %zu, currently %d",
+			sizeof(struct connfem_epaelna_flag_pair),
+			tlv->length);
+		return -EINVAL;
+	}
+
+	subsys_cb = cfm_epaelna_flags_subsys_cb_get(subsys);
+	if (subsys_cb == NULL)
+		return -EINVAL;
+
+	err = cfm_cfg_parse_flags_helper(tlv->length/sizeof(struct connfem_epaelna_flag_pair),
+			subsys_cb,
+			tlv,
+			&ctx->epaelna.flags_cfg[subsys].pairs);
+	if (err < 0)
+		return -EINVAL;
+
+	cfm_epaelna_flags_pairs_dump(subsys, ctx->epaelna.flags_cfg[subsys].pairs);
+
+	ctx->epaelna.flags_cfg[subsys].obj = subsys_cb->flags_get();
+	if (!ctx->epaelna.flags_cfg[subsys].obj) {
+		pr_info("[WARN] %s flags structure is NULL",
+			cfm_subsys_name[subsys]);
+		return -EINVAL;
+	}
 
 	return 0;
 }
 
 /**
- * cfm_cfg_parse_flags_cm
- *	Parse common flags from config file
+ * cfm_cfg_parse_part_name
+ *	Parse A/G band part name from config file
  *
  * Parameters
- *	ctx : Pointer to connfem context
- *	tlv	: Pointer to tlv data containing common flags
+ *	port	: connfem_rf_port
+ *	ctx	: Pointer to connfem context
+ *	tlv	: Pointer to tlv data containing part name
  *
  * Return value
  *	0	: Success
  *	-EINVAL	: Error
  *
  */
-static int cfm_cfg_parse_flags_cm(struct connfem_context *ctx,
+static int cfm_cfg_parse_part_name(enum connfem_rf_port port,
+				struct cfm_epaelna_config *cfg,
 				struct cfm_cfg_tlv *tlv)
 {
-	if (tlv->length != sizeof(struct connfem_epaelna_flags_common)) {
-		pr_info("[WARN] flags common length (%d) should be (%zu)",
-				tlv->length,
-				sizeof(struct connfem_epaelna_flags_common));
+	if (port >= CONNFEM_PORT_NUM) {
+		pr_info("[WARN] invalid port (%d)", port);
 		return -EINVAL;
 	}
 
-	memcpy(&ctx->cfg.cfm_cfg_flags_cm, tlv->data, tlv->length);
-	ctx->epaelna.flags_cfg[CONNFEM_SUBSYS_NONE].obj = &ctx->cfg.cfm_cfg_flags_cm;
+	if (tlv->length == 0 ||
+		tlv->length > sizeof(cfg->fem_info.part_name[port])) {
+		pr_info("[WARN] invalid part name length (%d)", tlv->length);
+		return -EINVAL;
+	}
+
+	memset(&cfg->fem_info.part_name[port], 0, sizeof(cfg->fem_info.part_name[port]));
+	memcpy(&cfg->fem_info.part_name[port], tlv->data, tlv->length);
+	cfg->fem_info.part_name[port][sizeof(cfg->fem_info.part_name[port])-1] = '\0';
 
 	return 0;
 }
@@ -327,10 +370,19 @@ static int cfm_cfg_parse(struct connfem_context *ctx,
 			ret = cfm_cfg_parse_pin_info(&ctx->epaelna, tlv);
 			break;
 		case CONNFEM_CFG_FLAGS_BT:
-			ret = cfm_cfg_parse_flags_bt(ctx, tlv);
+			ret = cfm_cfg_parse_flags(CONNFEM_SUBSYS_BT, ctx, tlv);
 			break;
 		case CONNFEM_CFG_FLAGS_CM:
-			ret = cfm_cfg_parse_flags_cm(ctx, tlv);
+			ret = cfm_cfg_parse_flags(CONNFEM_SUBSYS_NONE, ctx, tlv);
+			break;
+		case CONNFEM_CFG_FLAGS_WIFI:
+			ret = cfm_cfg_parse_flags(CONNFEM_SUBSYS_WIFI, ctx, tlv);
+			break;
+		case CONNFEM_CFG_G_PART_NAME:
+			ret = cfm_cfg_parse_part_name(CONNFEM_PORT_WFG, &ctx->epaelna, tlv);
+			break;
+		case CONNFEM_CFG_A_PART_NAME:
+			ret = cfm_cfg_parse_part_name(CONNFEM_PORT_WFA, &ctx->epaelna, tlv);
 			break;
 		default:
 			pr_info("%s, unknown tag = %d",
@@ -351,4 +403,77 @@ static int cfm_cfg_parse(struct connfem_context *ctx,
 	}
 
 	return ret;
+}
+
+static int cfm_cfg_parse_flags_helper(int count,
+				struct connfem_epaelna_subsys_cb *subsys_cb,
+				struct cfm_cfg_tlv *tlv,
+				struct cfm_container **result_out)
+{
+	unsigned int i = 0, len = 0, offset = 0, tbl_size = 0;
+	struct connfem_epaelna_flag_tbl_entry *entry;
+	struct cfm_container *result = NULL;
+	struct connfem_epaelna_flag_pair *pair;
+	struct connfem_epaelna_flag_pair pairTlv;
+
+	tbl_size = subsys_cb->flags_cnt();
+
+	if (count == 0 || count > tbl_size) {
+		pr_info("[WARN] invalid flags count(%d), max(%d)",
+			count,
+			tbl_size);
+		return -EINVAL;
+	}
+
+	result = cfm_container_alloc(count, sizeof(struct connfem_epaelna_flag_pair));
+	if (!result)
+		return -ENOMEM;
+
+	/* Retrieves flags name from tlv */
+	while (offset < tlv->length) {
+		if (offset + sizeof(struct connfem_epaelna_flag_pair) > tlv->length) {
+			pr_info("%s,[WARN] tlv->data > tlv->length (%zu>%hu)",
+				__func__,
+				offset + sizeof(struct connfem_epaelna_flag_pair),
+				tlv->length);
+			return -EINVAL;
+		}
+		memset(&pairTlv, 0, sizeof(struct connfem_epaelna_flag_pair));
+		memcpy(&pairTlv, tlv->data+offset, sizeof(struct connfem_epaelna_flag_pair));
+		pairTlv.name[CONNFEM_FLAG_NAME_SIZE-1] = '\0';
+
+		/* Skip if not supported by subsys */
+		entry = cfm_epaelna_flags_subsys_find(pairTlv.name,
+			subsys_cb->flags_tbl_get());
+		if (!entry) {
+			offset += sizeof(struct connfem_epaelna_flag_pair);
+			continue;
+		}
+
+		/* Double check if container is big enough to keep this flag */
+		pair = cfm_container_entry(result, i);
+		if (i >= result->cnt || !pair) {
+			pr_info("[ERR] Drop '%s' prop, too many flags %d > %d",
+				pairTlv.name, i + 1, result->cnt);
+			offset += sizeof(struct connfem_epaelna_flag_pair);
+			continue;
+		}
+
+		/* Update subsys' flags value */
+		*(entry->addr) = pairTlv.value;
+
+		/* Update subsys' flags container entry */
+		len = strlen(pairTlv.name) + 1;
+		memcpy(pair->name, pairTlv.name, len);
+		pair->value = *(entry->addr);
+		i++;
+
+		offset += sizeof(struct connfem_epaelna_flag_pair);
+	}
+
+	result->cnt = i;
+
+	*result_out = result;
+
+	return 0;
 }
