@@ -104,6 +104,7 @@ void cfm_cfg_process(char *filename)
 
 	if (!connfem_ctx) {
 		pr_info("[WARN] alloc mem for connfem_ctx fail, not parsing conf\n");
+		release_firmware(data);
 		return;
 	}
 

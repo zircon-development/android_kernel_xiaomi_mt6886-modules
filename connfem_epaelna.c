@@ -812,7 +812,7 @@ void cfm_epaelna_laainfo_dump(struct connfem_epaelna_laa_pin_info *laa)
 void cfm_epaelna_flags_dump(enum connfem_subsys subsys,
 			    struct cfm_epaelna_flags_config *flags)
 {
-	if (subsys < CONNFEM_SUBSYS_NONE || subsys >= CONNFEM_SUBSYS_NUM)
+	if (subsys >= CONNFEM_SUBSYS_NUM)
 		return;
 
 	if (!flags) {
@@ -883,11 +883,16 @@ void cfm_epaelna_flags_pairs_dump(enum connfem_subsys subsys,
 	for (i = 0; i < pairs->cnt; i++) {
 		pair = (struct connfem_epaelna_flag_pair*)
 			cfm_container_entry(pairs, i);
-
-		pr_info("[%s]FlagPairs, [%d]'%s':0x%02x",
-			cfm_subsys_name[subsys],
-			i,
-			pair->name,
-			pair->value);
+		if (pair) {
+			pr_info("[%s]FlagPairs, [%d]'%s':0x%02x",
+				cfm_subsys_name[subsys],
+				i,
+				pair->name,
+				pair->value);
+		} else {
+			pr_info("[%s]FlagPairs, [%d]pair = NULL",
+				cfm_subsys_name[subsys],
+				i);
+		}
 	}
 }

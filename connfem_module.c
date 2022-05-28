@@ -237,7 +237,7 @@ static int cfm_ioc_epa_fn_stat_hdlr(unsigned long usr_arg)
 	data.cnt = 0;
 	data.entry_sz = 0;
 
-	if (data.subsys < CONNFEM_SUBSYS_NONE || data.subsys >= CONNFEM_SUBSYS_NUM) {
+	if (data.subsys >= CONNFEM_SUBSYS_NUM) {
 		pr_info("%s, unsupported subsys %d", __func__, data.subsys);
 		err = -EINVAL;
 		goto fn_stat_done;
@@ -312,7 +312,7 @@ static int cfm_ioc_epa_fn_hdlr(unsigned long usr_arg)
 		return -EINVAL;
 	}
 
-	if (data.subsys < CONNFEM_SUBSYS_NONE || data.subsys >= CONNFEM_SUBSYS_NUM) {
+	if (data.subsys >= CONNFEM_SUBSYS_NUM) {
 		pr_info("%s, unsupported subsys %d", __func__, data.subsys);
 		cfm_ioc_epa_cont_empty(data.names);
 		return -EINVAL;
@@ -411,7 +411,7 @@ static int cfm_ioc_epa_flags_stat_hdlr(unsigned long usr_arg)
 	data.cnt = 0;
 	data.entry_sz = 0;
 
-	if (data.subsys < CONNFEM_SUBSYS_NONE || data.subsys >= CONNFEM_SUBSYS_NUM) {
+	if (data.subsys >= CONNFEM_SUBSYS_NUM) {
 		pr_info("%s, unsupported subsys %d", __func__, data.subsys);
 		err = -EINVAL;
 		goto flags_stat_done;
@@ -477,7 +477,7 @@ static int cfm_ioc_epa_flags_hdlr(unsigned long usr_arg)
 		return -EINVAL;
 	}
 
-	if (data.subsys < CONNFEM_SUBSYS_NONE || data.subsys >= CONNFEM_SUBSYS_NUM) {
+	if (data.subsys >= CONNFEM_SUBSYS_NUM) {
 		pr_info("%s, unsupported subsys %d", __func__, data.subsys);
 		cfm_ioc_epa_cont_empty(data.pairs);
 		return -EINVAL;
