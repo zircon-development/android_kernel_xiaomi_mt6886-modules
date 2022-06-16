@@ -114,6 +114,7 @@ void cfm_cfg_process(char *filename)
 		pr_info("[WARN] conf parsing fail\n");
 		if (connfem_ctx) {
 			cfm_context_free(connfem_ctx);
+			kfree(connfem_ctx);
 			connfem_ctx = NULL;
 		}
 	}
@@ -437,6 +438,7 @@ static int cfm_cfg_parse_flags_helper(int count,
 				__func__,
 				offset + sizeof(struct connfem_epaelna_flag_pair),
 				tlv->length);
+			cfm_container_free(result);
 			return -EINVAL;
 		}
 		memset(&pairTlv, 0, sizeof(struct connfem_epaelna_flag_pair));
