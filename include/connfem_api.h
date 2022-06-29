@@ -120,6 +120,9 @@ extern bool connfem_is_available(enum connfem_type fem_type);
 extern int connfem_epaelna_get_fem_info(
 			struct connfem_epaelna_fem_info *fem_info);
 
+extern int connfem_epaelna_get_bt_fem_info(
+			struct connfem_epaelna_fem_info *fem_info);
+
 extern int connfem_epaelna_get_pin_info(
 			struct connfem_epaelna_pin_info *pin_info);
 

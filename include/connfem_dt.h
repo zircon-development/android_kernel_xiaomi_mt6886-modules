@@ -16,6 +16,7 @@
 #define CFM_DT_NODE_WIFI		"wifi"
 #define CFM_DT_NODE_BT			"bt"
 #define CFM_DT_PROP_PARTS		"parts"
+#define CFM_DT_PROP_BT_PARTS	"bt_parts"
 #define CFM_DT_NODE_HWID		"hwid"
 #define CFM_DT_PROP_GPIO		"gpio"
 #define CFM_DT_NODE_PMIC		"pmic"
@@ -90,8 +91,10 @@ struct cfm_dt_epaelna_flags_context {
 struct cfm_dt_epaelna_context {
 	unsigned int hwid;
 	struct device_node *parts_np[CONNFEM_PORT_NUM]; /* selected 'parts' */
+	struct device_node *bt_parts_np[CONNFEM_PORT_NUM];
 
 	struct cfm_dt_epaelna_pctl_context pctl;
+	struct cfm_dt_epaelna_pctl_context bt_pctl;
 
 	struct cfm_dt_epaelna_flags_context flags;
 };

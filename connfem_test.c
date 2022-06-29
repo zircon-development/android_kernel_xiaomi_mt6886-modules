@@ -42,6 +42,7 @@
 void connfem_test(void)
 {
 	struct connfem_epaelna_fem_info fem_info;
+	struct connfem_epaelna_fem_info bt_fem_info;
 	struct connfem_epaelna_pin_info pin_info;
 	struct connfem_epaelna_laa_pin_info laa_pin_info;
 	struct connfem_epaelna_flags_common cm_flags;
@@ -51,6 +52,7 @@ void connfem_test(void)
 	int err = 0;
 
 	memset(&fem_info, 0, sizeof(fem_info));
+	memset(&bt_fem_info, 0, sizeof(bt_fem_info));
 	memset(&pin_info, 0, sizeof(pin_info));
 	memset(&laa_pin_info, 0, sizeof(laa_pin_info));
 	memset(&cm_flags, 0, sizeof(cm_flags));
@@ -81,6 +83,10 @@ void connfem_test(void)
 	pr_info("<<< err:%d", err);
 	cfm_epaelna_feminfo_dump(&fem_info);
 
+	pr_info("connfem_epaelna_get_bt_fem_info >>>");
+	err = connfem_epaelna_get_bt_fem_info(&bt_fem_info);
+	pr_info("<<< err:%d", err);
+	cfm_epaelna_feminfo_dump(&bt_fem_info);
 
 	pr_info("connfem_epaelna_get_pin_info >>>");
 	err = connfem_epaelna_get_pin_info(&pin_info);

@@ -128,7 +128,7 @@ void cfm_epaelna_flags_free(struct cfm_epaelna_flags_config *flags)
 	}
 }
 
-int cfm_epaelna_feminfo_populate(struct cfm_dt_epaelna_context *dt,
+int cfm_epaelna_feminfo_populate(struct device_node **parts_np,
 				  struct connfem_epaelna_fem_info *result_out)
 {
 	struct connfem_epaelna_fem_info result;
@@ -142,7 +142,7 @@ int cfm_epaelna_feminfo_populate(struct cfm_dt_epaelna_context *dt,
 	 * know if a FEM does exist, and could do some FEM protection logic.
 	 */
 	for (i = 0; i < CONNFEM_PORT_NUM; i++) {
-		np = dt->parts_np[i];
+		np = parts_np[i];
 
 		/* VID, PID */
 		cfm_epaelna_feminfo_part_populate(np, &result.part[i]);
@@ -678,7 +678,9 @@ void cfm_epaelna_config_dump(struct cfm_epaelna_config *cfg)
 	pr_info("ePAeLNA Config, available:%d", cfg->available);
 
 	cfm_epaelna_feminfo_dump(&cfg->fem_info);
+	cfm_epaelna_feminfo_dump(&cfg->bt_fem_info);
 	cfm_epaelna_pininfo_dump(&cfg->pin_cfg.pin_info);
+	cfm_epaelna_pininfo_dump(&cfg->bt_pin_cfg.pin_info);
 	cfm_epaelna_laainfo_dump(&cfg->pin_cfg.laa_pin_info);
 
 	for (i = 0; i < CONNFEM_SUBSYS_NUM; i++)

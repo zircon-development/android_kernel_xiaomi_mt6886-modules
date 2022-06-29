@@ -28,6 +28,9 @@ enum CONNFEM_CFG {
 	CONNFEM_CFG_FLAGS_WIFI		= 6,
 	CONNFEM_CFG_G_PART_NAME		= 7,
 	CONNFEM_CFG_A_PART_NAME		= 8,
+	CONNFEM_CFG_BT_FEMID		= 9,
+	CONNFEM_CFG_BT_G_PART_NAME	= 10,
+	CONNFEM_CFG_BT_A_PART_NAME	= 11,
 	CONNFEM_CFG_NUM
 };
 
@@ -42,8 +45,8 @@ struct cfm_cfg_tlv {
  ******************************************************************************/
 static int cfm_cfg_parse_id(struct connfem_context *ctx,
 					struct cfm_cfg_tlv *tlv);
-static int cfm_cfg_parse_femid(struct cfm_epaelna_config *cfg,
-					struct cfm_cfg_tlv *tlv);
+static int cfm_cfg_parse_femid(struct connfem_epaelna_fem_info *fem_info,
+				struct cfm_cfg_tlv *tlv);
 static int cfm_cfg_parse_pin_info(struct cfm_epaelna_config *cfg,
 					struct cfm_cfg_tlv *tlv);
 static int cfm_cfg_parse_flags(enum connfem_subsys subsys,
@@ -56,7 +59,7 @@ static int cfm_cfg_parse_flags_helper(int count,
 				struct cfm_cfg_tlv *tlv,
 				struct cfm_container **result_out);
 static int cfm_cfg_parse_part_name(enum connfem_rf_port port,
-				struct cfm_epaelna_config *cfg,
+				struct connfem_epaelna_fem_info *fem_info,
 				struct cfm_cfg_tlv *tlv);
 
 /*******************************************************************************
@@ -157,35 +160,35 @@ static int cfm_cfg_parse_id(struct connfem_context *ctx,
  *	Parse FEM ID from config file
  *
  * Parameters
- *	cfg : Pointer to epaelna config
- *	tlv	: Pointer to tlv data containing FEM ID
+ *	fem_id	: Pointer to fem_info or bt_fem_info
+ *	tlv		: Pointer to tlv data containing FEM ID
  *
  * Return value
  *	0	: Success
  *	-EINVAL	: Error
  *
  */
-static int cfm_cfg_parse_femid(struct cfm_epaelna_config *cfg,
+static int cfm_cfg_parse_femid(struct connfem_epaelna_fem_info *fem_info,
 				struct cfm_cfg_tlv *tlv)
 {
-	if (tlv->length != sizeof(cfg->fem_info.id)) {
+	if (tlv->length != sizeof(fem_info->id)) {
 		pr_info("[WARN] fem id length (%d) should be (%zu)",
 				tlv->length,
-				sizeof(cfg->fem_info.id));
+				sizeof(fem_info->id));
 		return -EINVAL;
 	}
 
-	memcpy(&cfg->fem_info.id, tlv->data, tlv->length);
-	cfg->fem_info.part[CONNFEM_PORT_WFG].vid =
+	memcpy(&fem_info->id, tlv->data, tlv->length);
+	fem_info->part[CONNFEM_PORT_WFG].vid =
 			CFM_CFG_FEMID_GET_G_VID(tlv->data[CFM_CFG_FEMID_VID]);
-	cfg->fem_info.part[CONNFEM_PORT_WFA].vid =
+	fem_info->part[CONNFEM_PORT_WFA].vid =
 			CFM_CFG_FEMID_GET_A_VID(tlv->data[CFM_CFG_FEMID_VID]);
-	cfg->fem_info.part[CONNFEM_PORT_WFG].pid =
+	fem_info->part[CONNFEM_PORT_WFG].pid =
 			tlv->data[CFM_CFG_FEMID_G_PID];
-	cfg->fem_info.part[CONNFEM_PORT_WFA].pid =
+	fem_info->part[CONNFEM_PORT_WFA].pid =
 			tlv->data[CFM_CFG_FEMID_A_PID];
 
-	pr_info("cfg->fem_info.id: 0x%08x", cfg->fem_info.id);
+	pr_info("fem_info->id: 0x%08x", fem_info->id);
 
 	return 0;
 }
@@ -291,8 +294,8 @@ static int cfm_cfg_parse_flags(enum connfem_subsys subsys,
  *
  * Parameters
  *	port	: connfem_rf_port
- *	ctx	: Pointer to connfem context
- *	tlv	: Pointer to tlv data containing part name
+ *	fem_id	: Pointer to fem_info or bt_fem_info
+ *	tlv		: Pointer to tlv data containing part name
  *
  * Return value
  *	0	: Success
@@ -300,7 +303,7 @@ static int cfm_cfg_parse_flags(enum connfem_subsys subsys,
  *
  */
 static int cfm_cfg_parse_part_name(enum connfem_rf_port port,
-				struct cfm_epaelna_config *cfg,
+				struct connfem_epaelna_fem_info *fem_info,
 				struct cfm_cfg_tlv *tlv)
 {
 	if (port >= CONNFEM_PORT_NUM) {
@@ -309,14 +312,14 @@ static int cfm_cfg_parse_part_name(enum connfem_rf_port port,
 	}
 
 	if (tlv->length == 0 ||
-		tlv->length > sizeof(cfg->fem_info.part_name[port])) {
+		tlv->length > sizeof(fem_info->part_name[port])) {
 		pr_info("[WARN] invalid part name length (%d)", tlv->length);
 		return -EINVAL;
 	}
 
-	memset(&cfg->fem_info.part_name[port], 0, sizeof(cfg->fem_info.part_name[port]));
-	memcpy(&cfg->fem_info.part_name[port], tlv->data, tlv->length);
-	cfg->fem_info.part_name[port][sizeof(cfg->fem_info.part_name[port])-1] = '\0';
+	memset(fem_info->part_name[port], 0, sizeof(fem_info->part_name[port]));
+	memcpy(fem_info->part_name[port], tlv->data, tlv->length);
+	fem_info->part_name[port][sizeof(fem_info->part_name[port])-1] = '\0';
 
 	return 0;
 }
@@ -366,7 +369,7 @@ static int cfm_cfg_parse(struct connfem_context *ctx,
 			ret = cfm_cfg_parse_id(ctx, tlv);
 			break;
 		case CONNFEM_CFG_FEMID:
-			ret = cfm_cfg_parse_femid(&ctx->epaelna, tlv);
+			ret = cfm_cfg_parse_femid(&ctx->epaelna.fem_info, tlv);
 			break;
 		case CONNFEM_CFG_PIN_INFO:
 			ret = cfm_cfg_parse_pin_info(&ctx->epaelna, tlv);
@@ -381,10 +384,24 @@ static int cfm_cfg_parse(struct connfem_context *ctx,
 			ret = cfm_cfg_parse_flags(CONNFEM_SUBSYS_WIFI, ctx, tlv);
 			break;
 		case CONNFEM_CFG_G_PART_NAME:
-			ret = cfm_cfg_parse_part_name(CONNFEM_PORT_WFG, &ctx->epaelna, tlv);
+			ret = cfm_cfg_parse_part_name(CONNFEM_PORT_WFG,
+					&ctx->epaelna.fem_info, tlv);
 			break;
 		case CONNFEM_CFG_A_PART_NAME:
-			ret = cfm_cfg_parse_part_name(CONNFEM_PORT_WFA, &ctx->epaelna, tlv);
+			ret = cfm_cfg_parse_part_name(CONNFEM_PORT_WFA,
+					&ctx->epaelna.fem_info, tlv);
+			break;
+		case CONNFEM_CFG_BT_FEMID:
+			ret = cfm_cfg_parse_femid(&ctx->epaelna.bt_fem_info,
+					tlv);
+			break;
+		case CONNFEM_CFG_BT_G_PART_NAME:
+			ret = cfm_cfg_parse_part_name(CONNFEM_PORT_WFG,
+					&ctx->epaelna.bt_fem_info, tlv);
+			break;
+		case CONNFEM_CFG_BT_A_PART_NAME:
+			ret = cfm_cfg_parse_part_name(CONNFEM_PORT_WFA,
+					&ctx->epaelna.bt_fem_info, tlv);
 			break;
 		default:
 			pr_info("%s, unknown tag = %d",

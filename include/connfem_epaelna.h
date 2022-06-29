@@ -40,8 +40,10 @@ struct cfm_epaelna_config {
 	bool available;
 
 	struct connfem_epaelna_fem_info fem_info;
+	struct connfem_epaelna_fem_info bt_fem_info;
 
 	struct cfm_epaelna_pin_config pin_cfg;
+	struct cfm_epaelna_pin_config bt_pin_cfg;
 
 	struct cfm_epaelna_flags_config flags_cfg[CONNFEM_SUBSYS_NUM];
 };
@@ -57,7 +59,7 @@ extern struct connfem_epaelna_subsys_cb cfm_bt_epaelna_cb;
  *			      F U N C T I O N S
  ******************************************************************************/
 extern int cfm_epaelna_feminfo_populate(
-		struct cfm_dt_epaelna_context *dt,
+		struct device_node **parts_np,
 		struct connfem_epaelna_fem_info *result);
 
 extern int cfm_epaelna_pincfg_populate(

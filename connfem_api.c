@@ -85,8 +85,35 @@ int connfem_epaelna_get_fem_info(struct connfem_epaelna_fem_info *fem_info)
 }
 EXPORT_SYMBOL(connfem_epaelna_get_fem_info);
 
+int connfem_epaelna_get_bt_fem_info(struct connfem_epaelna_fem_info *fem_info)
+{
+	if (!fem_info) {
+		pr_info("[WARN] %s, input parameter is NULL", __func__);
+		return -EINVAL;
+	}
+
+	memset(fem_info, 0, sizeof(*fem_info));
+
+	if (!connfem_ctx) {
+		pr_info("[WARN] %s, No ConnFem context", __func__);
+		return -EOPNOTSUPP;
+	}
+
+	memcpy(fem_info, &connfem_ctx->epaelna.bt_fem_info, sizeof(*fem_info));
+
+	pr_info("GetFemInfo");
+	cfm_epaelna_feminfo_dump(fem_info);
+
+	return 0;
+}
+EXPORT_SYMBOL(connfem_epaelna_get_bt_fem_info);
+
+
 int connfem_epaelna_get_pin_info(struct connfem_epaelna_pin_info *pin_info)
 {
+	int total_pin_count = 0;
+	int pin_count = 0;
+
 	if (!pin_info) {
 		pr_info("[WARN] %s, input parameter is NULL", __func__);
 		return -EINVAL;
@@ -99,8 +126,33 @@ int connfem_epaelna_get_pin_info(struct connfem_epaelna_pin_info *pin_info)
 		return -EOPNOTSUPP;
 	}
 
-	memcpy(pin_info, &connfem_ctx->epaelna.pin_cfg.pin_info,
-	       sizeof(*pin_info));
+	total_pin_count = connfem_ctx->epaelna.pin_cfg.pin_info.count +
+		connfem_ctx->epaelna.bt_pin_cfg.pin_info.count;
+
+	if (total_pin_count >= CONNFEM_EPAELNA_PIN_COUNT) {
+		pr_info("[WARN] %s, pin count:%d > %d",
+			__func__,
+			total_pin_count,
+			CONNFEM_EPAELNA_PIN_COUNT);
+		return -EOPNOTSUPP;
+	}
+
+	pin_info->count = total_pin_count;
+	pin_count = connfem_ctx->epaelna.pin_cfg.pin_info.count;
+
+	if (connfem_ctx->epaelna.pin_cfg.pin_info.count > 0) {
+		memcpy(pin_info->pin,
+			&connfem_ctx->epaelna.pin_cfg.pin_info.pin,
+			connfem_ctx->epaelna.pin_cfg.pin_info.count *
+			sizeof(struct connfem_epaelna_pin));
+	}
+
+	if (connfem_ctx->epaelna.bt_pin_cfg.pin_info.count > 0) {
+		memcpy(pin_info->pin + pin_count,
+			&connfem_ctx->epaelna.bt_pin_cfg.pin_info.pin,
+			connfem_ctx->epaelna.bt_pin_cfg.pin_info.count *
+			sizeof(struct connfem_epaelna_pin));
+	}
 
 	pr_info("GetPinInfo");
 	cfm_epaelna_pininfo_dump(pin_info);
