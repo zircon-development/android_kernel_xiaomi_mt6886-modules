@@ -44,6 +44,7 @@ static struct connfem_epaelna_flag_tbl_entry wf_epaelna_flags_map[] = {
 	{"open-loop",	(unsigned char*)&wf_epaelna_flags.open_loop},
 	{"laa",		(unsigned char*)&wf_epaelna_flags.laa},
 	{"epa-option",	(unsigned char*)&wf_epaelna_flags.epa_option},
+	{"only-2g",	(unsigned char*)&wf_epaelna_flags.only_2g},
 	{NULL, NULL}
 };
 
