@@ -82,6 +82,7 @@ struct connfem_epaelna_flags_common {
 struct connfem_epaelna_flags_wifi {
 	bool open_loop;
 	bool laa;
+	unsigned char epa_option;
 };
 
 struct connfem_epaelna_flags_bt {
@@ -118,9 +119,6 @@ struct connfem_epaelna_subsys_cb {
 extern bool connfem_is_available(enum connfem_type fem_type);
 
 extern int connfem_epaelna_get_fem_info(
-			struct connfem_epaelna_fem_info *fem_info);
-
-extern int connfem_epaelna_get_bt_fem_info(
 			struct connfem_epaelna_fem_info *fem_info);
 
 extern int connfem_epaelna_get_pin_info(
