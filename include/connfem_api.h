@@ -82,6 +82,7 @@ struct connfem_epaelna_flags_common {
 struct connfem_epaelna_flags_wifi {
 	bool open_loop;
 	bool laa;
+	unsigned char epa_option;
 };
 
 struct connfem_epaelna_flags_bt {
