@@ -123,6 +123,7 @@ WMT_CONSYS_IC_OPS __weak consys_ic_ops_mt6768 = {};
 WMT_CONSYS_IC_OPS __weak consys_ic_ops_mt6785 = {};
 WMT_CONSYS_IC_OPS __weak consys_ic_ops_mt6781 = {};
 WMT_CONSYS_IC_OPS __weak consys_ic_ops_mt6833 = {};
+WMT_CONSYS_IC_OPS __weak consys_ic_ops_mt6835 = {};
 WMT_CONSYS_IC_OPS __weak consys_ic_ops_mt6853 = {};
 WMT_CONSYS_IC_OPS __weak consys_ic_ops_mt6855 = {};
 WMT_CONSYS_IC_OPS __weak consys_ic_ops_mt6873 = {};
@@ -141,6 +142,7 @@ const struct of_device_id apwmt_of_ids[] = {
 	{.compatible = "mediatek,mt6785-consys", .data = &consys_ic_ops_mt6785},
 	{.compatible = "mediatek,mt6781-consys", .data = &consys_ic_ops_mt6781},
 	{.compatible = "mediatek,mt6833-consys", .data = &consys_ic_ops_mt6833},
+	{.compatible = "mediatek,mt6835-consys", .data = &consys_ic_ops_mt6835},
 	{.compatible = "mediatek,mt6853-consys", .data = &consys_ic_ops_mt6853},
 	{.compatible = "mediatek,mt6855-consys", .data = &consys_ic_ops_mt6855},
 	{.compatible = "mediatek,mt6873-consys", .data = &consys_ic_ops_mt6873},
@@ -363,7 +365,6 @@ static INT32 mtk_wmt_probe(struct platform_device *pdev)
 	INT32 pin_ret = 0;
 	UINT32 pinmux = 0;
 	struct device_node *pinctl_node = NULL, *pins_node = NULL;
-	UINT8 __iomem *pConnsysEmiStart = NULL;
 
 	if (pdev)
 		g_pdev = pdev;
@@ -409,13 +410,6 @@ static INT32 mtk_wmt_probe(struct platform_device *pdev)
 		return iRet;
 
 	if (gConEmiPhyBase) {
-		pConnsysEmiStart = ioremap(gConEmiPhyBase, gConEmiSize);
-		WMT_PLAT_PR_INFO("Clearing Connsys EMI (virtual(0x%p) physical(0x%pa)) %llu bytes\n",
-				   pConnsysEmiStart, &gConEmiPhyBase, gConEmiSize);
-		memset_io(pConnsysEmiStart, 0, gConEmiSize);
-		iounmap(pConnsysEmiStart);
-		pConnsysEmiStart = NULL;
-
 		if (wmt_consys_ic_ops->consys_ic_emi_mpu_set_region_protection)
 			wmt_consys_ic_ops->consys_ic_emi_mpu_set_region_protection();
 		if (wmt_consys_ic_ops->consys_ic_emi_set_remapping_reg)
@@ -566,7 +560,7 @@ static void plat_resume_handler(struct work_struct *work)
 
 static int mtk_wmt_resume(void)
 {
-	WMT_PLAT_PR_INFO(" mtk_wmt_resume !!");
+	WMT_PLAT_PR_DBG(" mtk_wmt_resume !!");
 	schedule_work(&plt_resume_worker);
 	connsys_dedicated_log_set_ap_state(1);
 
@@ -882,6 +876,9 @@ INT32 mtk_wcn_consys_detect_adie_chipid(UINT32 co_clock_type)
 		if (chipid > 0) {
 			g_adie_chipid = chipid;
 			WMT_PLAT_PR_INFO("Set a-die chipid = %x\n", chipid);
+			/* update emi_ap_phy_addr according to a-die chip */
+			if (wmt_consys_ic_ops->consys_ic_emi_set_remapping_reg)
+				wmt_consys_ic_ops->consys_ic_emi_set_remapping_reg();
 		} else
 			WMT_PLAT_PR_INFO("Detect a-die chipid = %x failed!\n", chipid);
 		wmt_lib_set_adie_workable((chipid > 0) ? 1 : 0);
@@ -1450,14 +1447,17 @@ INT32 mtk_wcn_consys_get_debug_reg_ary_size(VOID)
 {
 	if (wmt_consys_ic_ops == NULL)
 		wmt_consys_ic_ops = mtk_wcn_get_consys_ic_ops();
+
 	if (wmt_consys_ic_ops && wmt_consys_ic_ops->consys_ic_get_debug_reg_ary_size)
 		return *(wmt_consys_ic_ops->consys_ic_get_debug_reg_ary_size);
 	return 0;
 }
+
 P_REG_MAP_ADDR mtk_wcn_consys_get_debug_reg_ary(VOID)
 {
 	if (wmt_consys_ic_ops == NULL)
 		wmt_consys_ic_ops = mtk_wcn_get_consys_ic_ops();
+
 	if (wmt_consys_ic_ops && wmt_consys_ic_ops->consys_ic_get_debug_reg_ary)
 		return wmt_consys_ic_ops->consys_ic_get_debug_reg_ary;
 	return NULL;

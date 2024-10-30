@@ -56,7 +56,6 @@
 #endif
 #endif
 #include <linux/proc_fs.h>
-#include <linux/thermal.h>
 #include <mtk_wcn_cmb_stub.h>
 #include "osal_typedef.h"
 #include "osal.h"
@@ -94,6 +93,8 @@
 #define COMPAT_WMT_IOCTL_SET_VENDOR_PATCH_VERSION	_IOW(WMT_IOC_MAGIC, 37, compat_uptr_t)
 #define COMPAT_WMT_IOCTL_SET_ACTIVE_PATCH_VERSION	_IOR(WMT_IOC_MAGIC, 40, compat_uptr_t)
 #define COMPAT_WMT_IOCTL_GET_ACTIVE_PATCH_VERSION	_IOR(WMT_IOC_MAGIC, 41, compat_uptr_t)
+#define COMPAT_WMT_IOCTL_GET_DIRECT_PATH_EMI_SIZE	_IOR(WMT_IOC_MAGIC, 42, compat_uptr_t)
+#define COMPAT_WMT_IOCTL_GET_FIRMWARE_VERSION		_IOR(WMT_IOC_MAGIC, 43, compat_uptr_t)
 #endif
 
 #define WMT_IOC_MAGIC        0xa0
@@ -126,6 +127,7 @@
 #define WMT_IOCTL_SET_ACTIVE_PATCH_VERSION	_IOR(WMT_IOC_MAGIC, 40, char*)
 #define WMT_IOCTL_GET_ACTIVE_PATCH_VERSION	_IOR(WMT_IOC_MAGIC, 41, char*)
 #define WMT_IOCTL_GET_DIRECT_PATH_EMI_SIZE	_IOR(WMT_IOC_MAGIC, 42, unsigned int)
+#define WMT_IOCTL_GET_FIRMWARE_VERSION		_IOR(WMT_IOC_MAGIC, 43, char*)
 
 #define MTK_WMT_VERSION  "Consys WMT Driver - v1.0"
 #define MTK_WMT_DATE     "2013/01/20"
@@ -624,8 +626,10 @@ LONG wmt_dev_tm_temp_query(VOID)
 	LONG return_temp = 0;
 	INT8 query_cond = 0;
 
-	if (gWmtClose != 0)
-		return THERMAL_TEMP_INVALID;
+	if (gWmtInitStatus != WMT_INIT_DONE) {
+		WMT_INFO_FUNC("WMT_init is not finished yet, return 0 directly.\n");
+		return 0;
+	}
 
 	/* Let us work on the copied version of function static variables */
 	osal_lock_unsleepable_lock(&g_temp_query_spinlock);
@@ -1441,6 +1445,21 @@ LONG WMT_unlocked_ioctl(struct file *filp, UINT32 cmd, ULONG arg)
 		break;
 	case WMT_IOCTL_GET_CHECK_PATCH_STATUS:
 		iRet = wmt_lib_get_check_patch_status();
+		break;
+
+	case WMT_IOCTL_GET_FIRMWARE_VERSION:
+		do {
+			char version[128];
+
+			iRet = wmt_lib_get_firmware_version(version, sizeof(version));
+			if (iRet) {
+				iRet = -EFAULT;
+				break;
+			}
+
+			if (copy_to_user((PVOID)arg, version, strlen(version)))
+				iRet = -EFAULT;
+		} while (0);
 		break;
 	default:
 		iRet = -EINVAL;
