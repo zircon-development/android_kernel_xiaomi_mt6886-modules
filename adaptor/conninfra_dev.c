@@ -110,7 +110,6 @@ static long conn_adaptor_dev_unlocked_ioctl(
 static long conn_adaptor_dev_compat_ioctl(
 		struct file *filp, unsigned int cmd, unsigned long arg);
 #endif
-static int conn_adaptor_mmap(struct file *pFile, struct vm_area_struct *pVma);
 
 static int conn_adaptor_dev_do_drv_init(void);
 
@@ -137,7 +136,6 @@ static const struct file_operations g_conn_adaptor_dev_fops = {
 #ifdef CONFIG_COMPAT
 	.compat_ioctl = conn_adaptor_dev_compat_ioctl,
 #endif
-	.mmap = conn_adaptor_mmap,
 };
 
 static int g_conn_adaptor_major = CONNINFRA_DEV_MAJOR;
@@ -151,6 +149,11 @@ static atomic_t g_es_lr_flag_for_blank = ATOMIC_INIT(0); /* for ctrl blank flag 
 *                              F U N C T I O N S
 ********************************************************************************
 */
+
+bool __weak conn_adaptor_is_internal(void)
+{
+	return false;
+}
 
 static u32 conn_adaptor_get_chipid(void)
 {
@@ -246,8 +249,6 @@ static long conn_adaptor_dev_unlocked_ioctl(struct file *filp, unsigned int cmd,
 {
 	int retval = 0;
 
-	pr_info("[%s] cmd (%d),arg(%ld)\n", __func__, cmd, arg);
-
 	/* Special process for module init command */
 	if (cmd == CONNINFRA_IOCTL_DO_MODULE_INIT) {
 		pr_info("[%s] KO mode", __func__);
@@ -256,16 +257,21 @@ static long conn_adaptor_dev_unlocked_ioctl(struct file *filp, unsigned int cmd,
 
 	switch (cmd) {
 	case CONNINFRA_IOCTL_GET_CHIP_ID:
-		pr_info("[%s] get chip id\n", __func__);
 		retval = conn_adaptor_get_chipid();
+		pr_info("[%s] get chip id: 0x%x\n", __func__, retval);
 		break;
 	case CONNINFRA_IOCTL_SET_COREDUMP_MODE:
-		pr_info("[%s] set coredump \n", __func__);
+		pr_info("[%s] set coredump as: %d\n", __func__, arg);
 		conn_adaptor_set_coredump_mode(arg);
 		break;
 	case CONNINFRA_IOCTL_GET_ADIE_CHIP_ID:
-		retval = conn_adaptor_detect_adie_chipid(arg);
-		pr_info("[%s] get adie [%s]=[0x%04x]", __func__, g_adp_drv_name[arg], retval);
+		if (arg >= CONN_ADAPTOR_DRV_SIZE)
+			pr_notice("[%s][CONNINFRA_IOCTL_GET_ADIE_CHIP_ID] invalid input: %lu",
+				__func__, arg);
+		else {
+			retval = conn_adaptor_detect_adie_chipid(arg);
+			pr_info("[%s] get adie [%s]=[0x%04x]", __func__, g_adp_drv_name[arg], retval);
+		}
 		break;
 	}
 
@@ -277,21 +283,10 @@ static long conn_adaptor_dev_compat_ioctl(struct file *filp, unsigned int cmd, u
 {
 	long ret;
 
-	pr_info("[%s] cmd (%d)\n", __func__, cmd);
 	ret = conn_adaptor_dev_unlocked_ioctl(filp, cmd, arg);
 	return ret;
 }
 #endif
-
-/* move to connv2 */
-static int conn_adaptor_mmap(struct file *pFile, struct vm_area_struct *pVma)
-{
-	if (atomic_read(&g_drv_gen_inst[CONN_ADAPTOR_DRV_GEN_CONNAC_2].enable) &&
-			g_drv_gen_inst[CONN_ADAPTOR_DRV_GEN_CONNAC_2].drv_gen_cb.coredump_mmap)
-			return (*(g_drv_gen_inst[CONN_ADAPTOR_DRV_GEN_CONNAC_2].drv_gen_cb.coredump_mmap))(pFile, pVma);
-
-	return -EINVAL;
-}
 
 static int conn_adaptor_dev_get_disp_blank_state(void)
 {
@@ -418,15 +413,26 @@ int conn_adaptor_kern_dbg_handler(int x, int y, int z, char* buf, int buf_sz)
 {
 	int offset = 0, sz, i;
 
-	if (x == 0x40) {
+
+	switch (x) {
+	case 0x40:
 		for (i = 0; i < CONN_ADAPTOR_DRV_SIZE; i++) {
 			if (atomic_read(&g_drv_gen_inst[i].enable) &&
 				g_drv_gen_inst[i].drv_gen_cb.dump_power_state) {
 				sz = (*(g_drv_gen_inst[i].drv_gen_cb.dump_power_state))(buf + offset, buf_sz - offset);
 				if (sz > 0)
 					offset += sz;
+				if (offset >= buf_sz) {
+					pr_notice("[%s] buf full", __func__);
+					break;
+				}
 			}
 		}
+		break;
+	case 0x13:
+		pr_info("[%s] set coredump as: %d\n", __func__, y);
+		conn_adaptor_set_coredump_mode(y);
+		break;
 	}
 	return offset;
 }
@@ -613,6 +619,12 @@ static void conninfra_dev_deinit(void)
 	int iret = 0;
 
 	g_conn_adaptor_init_status = CONN_ADAPTOR_INIT_NOT_START;
+
+	/* deinit connv2 */
+	connv2_drv_deinit();
+
+	/* deinit connv3 */
+	connv3_drv_deinit();
 
 	conn_kern_adaptor_deinit();
 

@@ -156,8 +156,6 @@ static struct devapc_vio_callbacks conninfra_devapc_handle = {
 	.debug_dump = conninfra_devapc_violation_cb,
 };
 #endif
-/* mmap */
-int connv2_mmap(struct file *pFile, struct vm_area_struct *pVma);
 ssize_t connv2_coredump_emi_read(struct file *filp, char __user *buf, size_t count, loff_t *f_pos);
 int connv2_dump_power_state(uint8_t *buf, u32 buf_sz);
 
@@ -176,7 +174,6 @@ struct conn_adaptor_drv_gen_cb g_connv2_drv_gen = {
 
 	/* coredump */
 	.set_coredump_mode = connv2_set_coredump_mode,
-	.coredump_mmap = connv2_mmap,
 	.coredump_emi_read = connv2_coredump_emi_read,
 
 	/* dump power state */
@@ -198,8 +195,7 @@ struct wmt_platform_bridge g_plat_bridge = {
 #endif
 };
 
-
-
+static atomic_t g_connv2_hw_init_done = ATOMIC_INIT(0);
 
 /*******************************************************************************
 *                           P R I V A T E   D A T A
@@ -350,60 +346,6 @@ static void conninfra_register_thermal_callback(void)
 static void conninfra_clock_fail_dump_cb(void)
 {
 	conninfra_core_clock_fail_dump_cb();
-}
-
-int connv2_mmap(struct file *pFile, struct vm_area_struct *pVma)
-{
-	unsigned long bufId = pVma->vm_pgoff;
-	struct consys_emi_addr_info* addr_info = emi_mng_get_phy_addr();
-	unsigned int start_offset = 0, end_offset = 0;
-	unsigned long size = 0;
-	phys_addr_t emi_dump_addr = 0;
-
-	if (addr_info == NULL)
-		return -EINVAL;
-	emi_dump_addr = addr_info->emi_ap_phy_addr;
-
-	coredump_mng_get_emi_dump_offset(&start_offset, &end_offset);
-	size = end_offset - start_offset;
-
-	pr_info("conninfra_mmap start:%lu end:%lu size: %lu buffer id=%lu"
-		" emi dump section=[0x%lx][0x%08x, 0x%08x][0x%08x]\n",
-		pVma->vm_start, pVma->vm_end,
-		pVma->vm_end - pVma->vm_start, bufId,
-		emi_dump_addr, start_offset, end_offset, size);
-
-	if (end_offset <= start_offset ||
-	    start_offset >= addr_info->emi_size ||
-	    end_offset > addr_info->emi_size)
-		return -EINVAL;
-
-	if (bufId == 0) {
-		if (pVma->vm_end - pVma->vm_start > size)
-			return -EINVAL;
-		emi_dump_addr += start_offset;
-
-		pr_info("emi_dump_addr=[%lx]\n", emi_dump_addr);
-		if (remap_pfn_range(pVma, pVma->vm_start,
-			(emi_dump_addr >> PAGE_SHIFT),
-			size, pVma->vm_page_prot))
-			return -EAGAIN;
-		return 0;
-	} else if (bufId == 1) {
-		if (addr_info->md_emi_size == 0 ||
-		    pVma->vm_end - pVma->vm_start > addr_info->md_emi_size)
-			return -EINVAL;
-		pr_info("MD direct path size=%u map size=%lu\n",
-			addr_info->md_emi_size,
-			pVma->vm_end - pVma->vm_start);
-		if (remap_pfn_range(pVma, pVma->vm_start,
-			addr_info->md_emi_phy_addr >> PAGE_SHIFT,
-			pVma->vm_end - pVma->vm_start, pVma->vm_page_prot))
-			return -EAGAIN;
-		return 0;
-	}
-	/* Invalid bufId */
-	return -EINVAL;
 }
 
 ssize_t connv2_coredump_emi_read(struct file *filp, char __user *buf, size_t count, loff_t *f_pos)
@@ -609,11 +551,16 @@ int mtk_conninfra_probe(struct platform_device *pdev)
 	if (ret < 0)
 		pr_info("conn_pwr_init is failed %d.", ret);
 
+	atomic_set(&g_connv2_hw_init_done, 1);
+
+	pr_info("[%s] init done", __func__);
+
 	return 0;
 }
 
 int mtk_conninfra_remove(struct platform_device *pdev)
 {
+	atomic_set(&g_connv2_hw_init_done, 0);
 	consys_hw_deinit();
 	if (g_drv_dev)
 		g_drv_dev = NULL;
@@ -624,7 +571,6 @@ int mtk_conninfra_remove(struct platform_device *pdev)
 
 int connv2_drv_init(void)
 {
-	int iret = 0;
 	unsigned int connv2_radio_support = 0;
 	unsigned int drv_enum_converter[CONNDRV_TYPE_MAX] =
 		{CONN_SUPPOPRT_DRV_BT_TYPE_BIT, CONN_SUPPOPRT_DRV_FM_TYPE_BIT,
@@ -632,11 +578,23 @@ int connv2_drv_init(void)
 		0x0, 0x0};
 	int i = 0;
 	unsigned int adaptor_radio_support = 0;
+	int iret = 0, retry = 0;
+	static DEFINE_RATELIMIT_STATE(_rs, HZ, 1);
+
+	ratelimit_set_flags(&_rs, RATELIMIT_MSG_ON_RELEASE);
+
 
 	iret = platform_driver_register(&mtk_conninfra_dev_drv);
 	if (iret)
 		pr_err("Conninfra platform driver registered failed(%d)\n", iret);
-
+	else {
+		while (atomic_read(&g_connv2_hw_init_done) == 0) {
+			osal_sleep_ms(50);
+			retry++;
+			if (__ratelimit(&_rs))
+				pr_info("g_connv2_hw_init_done = 0, retry = %d", retry);
+		}
+	}
 	wmt_export_platform_bridge_register(&g_plat_bridge);
 
 	INIT_WORK(&g_conninfra_pmic_work.pmic_work, conninfra_dev_pmic_event_handler);

@@ -15,6 +15,7 @@
 #include "conn_adaptor.h"
 #include "connv3_hw.h"
 #include "connv3_core.h"
+#include "connv3_debug_utility.h"
 
 #ifdef CFG_CONNINFRA_UT_SUPPORT
 #include "connv3_test.h"
@@ -153,6 +154,7 @@ u32 connv3_chipid_get(void)
 
 void connv3_set_coredump_mode(int mode)
 {
+	connv3_coredump_set_dump_mode(mode);
 }
 
 u32 connv3_detect_adie_chipid(void)
@@ -196,7 +198,7 @@ void connv3_resume_notify(void)
 
 static void connv3_hw_ap_resume_handler(struct work_struct *work)
 {
-	connv3_core_reset_and_dump_power_state(NULL, 0);
+	connv3_core_reset_and_dump_power_state(NULL, 0, 0);
 }
 
 void connv3_power_on_off_notify(int on_off)
@@ -216,7 +218,7 @@ int connv3_dump_power_state(uint8_t *buf, u32 buf_sz)
 	char tmp_buf[CONN_DUMP_STATE_BUF_SIZE];
 
 	memset(tmp_buf, '\0', CONN_DUMP_STATE_BUF_SIZE);
-	ret = connv3_core_reset_and_dump_power_state(tmp_buf, CONN_DUMP_STATE_BUF_SIZE);
+	ret = connv3_core_reset_and_dump_power_state(tmp_buf, CONN_DUMP_STATE_BUF_SIZE, 1);
 	if (ret) {
 		return ret;
 	}

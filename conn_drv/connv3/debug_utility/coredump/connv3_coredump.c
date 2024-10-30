@@ -47,6 +47,7 @@ struct connv3_dump_ctx {
 	struct connv3_coredump_event_cb cb;
 	struct connv3_issue_info issue_info;
 	struct completion emi_dump;
+	OSAL_SLEEPABLE_LOCK ctx_lock;
 };
 
 static atomic_t g_dump_mode = ATOMIC_INIT(CONNV3_DUMP_MODE_DAEMON);
@@ -111,6 +112,13 @@ static void connv3_dump_free(const void* dst)
 	kvfree(dst);
 }
 
+static const char* connv3_dump_get_type_name(int type)
+{
+	if (type < CONNV3_DEBUG_TYPE_WIFI || type >= CONNV3_DEBUG_TYPE_SIZE)
+		return "TYPE_INVALID";
+	return g_type_name[type];
+}
+
 static void connv3_dump_set_dump_state(
 	struct connv3_dump_ctx *ctx, enum connv3_coredump_state state)
 {
@@ -147,6 +155,7 @@ static int connv3_coredump_info_analysis(
 		"Task_DrvBT",
 		"Task_DrvWifi",
 		"Task_DrvMODEM",
+		"Task_DrvConnv3",
 	};
 	const char* parser_sub_string[] = {
 		"<ASSERT> ",
@@ -484,8 +493,17 @@ int connv3_coredump_start(void* handler, const int drv, const char *reason, cons
 		pr_notice("[%s] state(%d) wrong", __func__, state);
 		return CONNV3_COREDUMP_ERR_WRONG_STATUS;
 	}
+
+	pr_info("[%s][%s] trigger_drv=%d reason=%s\n",
+		__func__, connv3_dump_get_type_name(ctx->conn_type), drv, reason);
 	connv3_dump_set_dump_state(ctx, CONNV3_COREDUMP_STATE_START);
 	osal_gettimeofday(&g_dump_start_time);
+
+	ret = osal_lock_sleepable_lock(&ctx->ctx_lock);
+	if (ret) {
+		pr_notice("[%s] get lock fail, ret = %d\n", __func__, ret);
+		return CONNV3_COREDUMP_ERR_GET_LOCK_FAIL;
+	}
 
 	if (fw_version != NULL)
 		fw_version_len = strlen(fw_version);
@@ -511,6 +529,8 @@ int connv3_coredump_start(void* handler, const int drv, const char *reason, cons
 
 	/* Send to native */
 	ret = conndump_netlink_send_to_native(ctx->conn_type, "[M]", (char*)dump_msg, strlen(dump_msg));
+
+	osal_unlock_sleepable_lock(&ctx->ctx_lock);
 	return 0;
 }
 EXPORT_SYMBOL(connv3_coredump_start);
@@ -532,7 +552,13 @@ int connv3_coredump_send(void *handler, char *tag, char *content, unsigned int l
 	}
 
 	if (state >= CONNV3_COREDUMP_STATE_START && state <= CONNV3_COREDUMP_STATE_MEM_REGION) {
+		ret = osal_lock_sleepable_lock(&ctx->ctx_lock);
+		if (ret) {
+			pr_notice("[%s] get lock fail, ret = %d\n", __func__, ret);
+			return CONNV3_COREDUMP_ERR_GET_LOCK_FAIL;
+		}
 		ret = conndump_netlink_send_to_native(ctx->conn_type, tag, content, length);
+		osal_unlock_sleepable_lock(&ctx->ctx_lock);
 	} else {
 		pr_notice("[%s][%s] tag=%s, wrong state %d", __func__, g_type_name[ctx->conn_type], tag, state);
 		return CONNV3_COREDUMP_ERR_WRONG_STATUS;
@@ -633,8 +659,13 @@ do { \
 			"\t\t\t<reason>%s</reason>\n",
 			ctx->issue_info.reason);
 
-	FORMAT_STRING(buf, len, max_len, sec_len,
-		"\t\t\t<keyword>NULL</keyword>\n");
+	if (ctx->issue_info.issue_type == CONNV3_ISSUE_DRIVER_ASSERT)
+		FORMAT_STRING(buf, len, max_len, sec_len,
+			"\t\t\t<keyword>%s</keyword>\n", ctx->issue_info.reason);
+	else
+		FORMAT_STRING(buf, len, max_len, sec_len,
+			"\t\t\t<keyword>NULL</keyword>\n");
+
 	FORMAT_STRING(buf, len, max_len, sec_len,
 		"\t\t</client>\n\t</hint>\n");
 	/*<hint><client> section @}*/
@@ -650,11 +681,29 @@ format_finish:
 int connv3_coredump_get_issue_info(void *handler, struct connv3_issue_info *issue_info, char *xml_str, unsigned int xml_str_size)
 {
 	struct connv3_dump_ctx *ctx = (struct connv3_dump_ctx*)handler;
+	enum connv3_coredump_state state;
+	int ret;
+
 	if (issue_info == NULL || ctx == NULL)
 		return CONNV3_COREDUMP_ERR_INVALID_INPUT;
+
+	state = connv3_dump_get_dump_state(ctx);
+	if (state < CONNV3_COREDUMP_STATE_START) {
+		pr_notice("[%s] state(%d) wrong", __func__, state);
+		return CONNV3_COREDUMP_ERR_WRONG_STATUS;
+	}
+
+	ret = osal_lock_sleepable_lock(&ctx->ctx_lock);
+	if (ret) {
+		pr_notice("[%s] get lock fail, ret = %d\n", __func__, ret);
+		return CONNV3_COREDUMP_ERR_GET_LOCK_FAIL;
+	}
+
 	memcpy(issue_info, &ctx->issue_info, sizeof(struct connv3_issue_info));
 	if (xml_str != NULL && xml_str_size > 0)
 		connv3_coredump_gen_issue_info_xml(ctx, xml_str, xml_str_size);
+
+	osal_unlock_sleepable_lock(&ctx->ctx_lock);
 	return 0;
 }
 EXPORT_SYMBOL(connv3_coredump_get_issue_info);
@@ -739,9 +788,23 @@ int connv3_coredump_end(void *handler, char *customized_string)
 {
 	struct connv3_dump_ctx *ctx = (struct connv3_dump_ctx*)handler;
 	struct timespec64 pre_end, end;
+	enum connv3_coredump_state state;
+	int ret;
 
 	if (ctx == NULL)
 		return CONNV3_COREDUMP_ERR_INVALID_INPUT;
+
+	state = connv3_dump_get_dump_state(ctx);
+	if (state < CONNV3_COREDUMP_STATE_START) {
+		pr_notice("[%s] state(%d) wrong", __func__, state);
+		return CONNV3_COREDUMP_ERR_WRONG_STATUS;
+	}
+
+	ret = osal_lock_sleepable_lock(&ctx->ctx_lock);
+	if (ret) {
+		pr_notice("[%s] get lock fail, ret = %d\n", __func__, ret);
+		return CONNV3_COREDUMP_ERR_GET_LOCK_FAIL;
+	}
 
 	osal_gettimeofday(&pre_end);
 	/* Send EMI dump or end command to native */
@@ -757,6 +820,9 @@ int connv3_coredump_end(void *handler, char *customized_string)
 		connv3_dump_mng_get_exception_tag_name(ctx->conn_type),
 		timespec64_to_ms(&g_dump_start_time, &end),
 		timespec64_to_ms(&pre_end, &end));
+
+	osal_unlock_sleepable_lock(&ctx->ctx_lock);
+
 	return 0;
 }
 EXPORT_SYMBOL(connv3_coredump_end);
@@ -782,6 +848,7 @@ void* connv3_coredump_init(int conn_type, const struct connv3_coredump_event_cb 
 	ctx->conn_type = conn_type;
 	connv3_dump_set_dump_state(ctx, CONNV3_COREDUMP_STATE_INIT);
 	init_completion(&ctx->emi_dump);
+	osal_sleepable_lock_init(&ctx->ctx_lock);
 
 	/* Register to netlink */
 	nl_cb.coredump_end = connv3_dump_emi_dump_end;
@@ -798,6 +865,7 @@ void connv3_coredump_deinit(void *handler)
 
 	if (handler == NULL)
 		return;
+	osal_sleepable_lock_deinit(&ctx->ctx_lock);
 	connv3_dump_free(ctx);
 }
 EXPORT_SYMBOL(connv3_coredump_deinit);
@@ -810,6 +878,7 @@ enum connv3_coredump_mode connv3_coredump_get_mode(void)
 
 void connv3_coredump_set_dump_mode(enum connv3_coredump_mode mode)
 {
+	pr_info("[%s] mode=%d\n", __func__, mode);
 	if (mode < CONNV3_DUMP_MODE_MAX)
 		atomic_set(&g_dump_mode, mode);
 }

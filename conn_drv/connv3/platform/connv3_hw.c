@@ -96,19 +96,25 @@ int connv3_hw_pwr_off(unsigned int curr_status, unsigned int off_radio)
 {
 	int ret;
 
-	if ((curr_status & (~(0x1 << off_radio))) == 0) {
-		ret = connv3_pinctrl_mng_ext_32k_ctrl(false);
-		if (ret) {
-			pr_err("[%s] turn off ext 32k fail, ret = %d", __func__, ret);
-			return ret;
-		}
+	ret = connv3_pmic_mng_antenna_power_ctrl(off_radio, 0);
+	if (ret)
+		pr_notice("[%s] antenna power ctrl fail, ret = %d",
+			__func__, ret);
 
+	if ((curr_status & (~(0x1 << off_radio))) == 0) {
 		ret = connv3_pinctrl_mng_remove();
 		if (ret) {
 			pr_err("[%s] remove pinctrl fail, ret = %d", __func__, ret);
 			return ret;
 		}
+	}
 
+	if (off_radio == CONNV3_DRV_TYPE_MAX) {
+		ret = connv3_pinctrl_mng_ext_32k_ctrl(false);
+		if (ret) {
+			pr_err("[%s] turn off ext 32k fail, ret = %d", __func__, ret);
+			return ret;
+		}
 		ret = connv3_pmic_mng_common_power_ctrl(0);
 		if (ret) {
 			pr_err("[%s] pmic off fail, ret = %d", __func__, ret);
@@ -132,6 +138,11 @@ int connv3_hw_pwr_on(unsigned int curr_status, unsigned int on_radio)
 		if (ret)
 			return ret;
 	}
+
+	ret = connv3_pmic_mng_antenna_power_ctrl(on_radio, 1);
+	if (ret)
+		pr_notice("[%s] antenna power control fail, ret = %d",
+			__func__, ret);
 
 	return 0;
 }
@@ -181,22 +192,22 @@ int connv3_hw_ext_32k_onoff(bool on)
 	return connv3_pinctrl_mng_ext_32k_ctrl(on);
 }
 
-int connv3_hw_bus_dump(enum connv3_drv_type drv_type, struct connv3_cr_cb *cb, void *priv_data)
+int connv3_hw_bus_dump(enum connv3_drv_type drv_type, struct connv3_cr_cb *cb)
 {
-	return connv3_hw_dbg_bus_dump(drv_type, cb, priv_data);
+	return connv3_hw_dbg_bus_dump(drv_type, cb);
 }
 
 int connv3_hw_power_info_dump(
-	enum connv3_drv_type drv_type, struct connv3_cr_cb *cb, void *priv_data,
+	enum connv3_drv_type drv_type, struct connv3_cr_cb *cb,
 	char *buf, unsigned int size)
 {
-	return connv3_hw_dbg_power_info_dump(drv_type, cb, priv_data, buf, size);
+	return connv3_hw_dbg_power_info_dump(drv_type, cb, buf, size);
 }
 
 int connv3_hw_power_info_reset(
-	enum connv3_drv_type drv_type, struct connv3_cr_cb *cb, void *priv_data)
+	enum connv3_drv_type drv_type, struct connv3_cr_cb *cb)
 {
-	return connv3_hw_dbg_power_info_reset(drv_type, cb, priv_data);
+	return connv3_hw_dbg_power_info_reset(drv_type, cb);
 }
 
 int connv3_hw_init(struct platform_device *pdev, struct connv3_dev_cb *dev_cb)

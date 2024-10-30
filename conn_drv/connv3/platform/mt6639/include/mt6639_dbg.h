@@ -8,70 +8,84 @@
 
 #include "connv3_hw_dbg.h"
 
+#define MT6639_CONN_INFRA_BUS_DUMP_VERSION	"20220905"
+
 #define MT6639_AP2CONN_INFRA_ON_SLP_PROT	0x70028730
 #define MT6639_CONN_INFRA_CLK_DETECT		0x7c023000
 #define MT6639_CONN_INFRA_VERSION_ID_REG	0x7c011000
 #define MT6639_CONN_INFRA_VERSION_ID		0x03010001
+#define MT6639_CONN_INFRA_VERSION_ID_E2		0x03010002
 #define MT6639_CONN_INFRA_OFF_IRQ_REG		0x7c023400
 
-struct connv3_dbg_command mt6639_pwr_b[] = {
+const struct connv3_dbg_command mt6639_pwr_b[] = {
 	/* Write, addr, mask, value, Read, addr*/
-	{ false, 0, 0, 0, true, 0x7C060A10},
+	/* B02 */ {false, 0, 0, 0, true, 0x7C060A10},
+	/* B05 */ {false, 0, 0, 0, true, 0x7C060014},
+	/* B06 */ {false, 0, 0, 0, true, 0x7C060054},
+	/* B07 */ {false, 0, 0, 0, true, 0x7C060010},
+	/* B08 */ {false, 0, 0, 0, true, 0x7C060050},
+	/* B09 */ {false, 0, 0, 0, true, 0x7C060018},
+	/* B10 */ {false, 0, 0, 0, true, 0x7C060058},
 };
 
-struct connv3_dump_list mt6639_dmp_list_pwr_b = {
+const struct connv3_dump_list mt6639_dmp_list_pwr_b = {
 	"power_b", sizeof(mt6639_pwr_b)/sizeof(struct connv3_dbg_command),
 	mt6639_pwr_b,
 };
 
-struct connv3_dbg_command mt6639_pwr_c[] = {
+const struct connv3_dbg_command mt6639_pwr_c[] = {
 	/* Write, addr, mask, value, Read, addr*/
-	{false, 0, 0, 0, true, 0x7C011030},
-	{false, 0, 0, 0, true, 0x7C012050},
-	{false, 0, 0, 0, true, 0x7C001344},
-	{false, 0, 0, 0, true, 0x7C000400},
-	{false, 0, 0, 0, true, 0x7C000404},
-	{false, 0, 0, 0, true, 0x7C0030A8},
-	{false, 0, 0, 0, true, 0x7C003120},
-	{false, 0, 0, 0, true, 0x7C003124},
-	{false, 0, 0, 0, true, 0x7C003128},
-	{false, 0, 0, 0, true, 0x7C00312C},
-	{false, 0, 0, 0, true, 0x7C003130},
-	{false, 0, 0, 0, true, 0x7C003134},
-	{true, 0x7c011100, 0x00600000, 0x0, true, 0x7C011134},
-	{true, 0x7c011100, 0x00600000, 0x00200000, true, 0x7C011134},
-	{true, 0x7c011100, 0x00600000, 0x00400000, true, 0x7C011134},
-	{true, 0x7c011100, 0x00600000, 0x00600000, true, 0x7C011134},
-	{false, 0, 0, 0, true, 0x7C091B8C},
-	{false, 0, 0, 0, true, 0x7C091B90},
-	{false, 0, 0, 0, true, 0x7C091B94},
-	{false, 0, 0, 0, true, 0x7C091B98},
-	{false, 0, 0, 0, true, 0x7C091B9C},
-	{false, 0, 0, 0, true, 0x7C091BA0},
-	{false, 0, 0, 0, true, 0x7C091BA4},
-	{false, 0, 0, 0, true, 0x7C098000},
-	{false, 0, 0, 0, true, 0x7C098050},
-	{false, 0, 0, 0, true, 0x7C098054},
-	{false, 0, 0, 0, true, 0x7C098058},
-	{false, 0, 0, 0, true, 0x7C098108},
-	{false, 0, 0, 0, true, 0x7C098004},
+	/* C00 */ {false, 0, 0, 0, true, 0x7C011030},
+	/* C01 */ {false, 0, 0, 0, true, 0x7C012050},
+	/* C02 */ {false, 0, 0, 0, true, 0x7C001344},
+	/* C03 */ {false, 0, 0, 0, true, 0x7C000400},
+	/* C04 */ {false, 0, 0, 0, true, 0x7C000404},
+	/* C05 */ {false, 0, 0, 0, true, 0x7C0910A8},
+	/* C06 */ {false, 0, 0, 0, true, 0x7C091120},
+	/* C07 */ {false, 0, 0, 0, true, 0x7C091124},
+	/* C08 */ {false, 0, 0, 0, true, 0x7C091128},
+	/* C09 */ {false, 0, 0, 0, true, 0x7C09112C},
+	/* C10 */ {false, 0, 0, 0, true, 0x7C091130},
+	/* C11 */ {false, 0, 0, 0, true, 0x7C091134},
+	/* C12 */ {true, 0x7c011100, 0x00600000, 0x0, true, 0x7C011134},
+	/* C13 */ {true, 0x7c011100, 0x00600000, 0x00200000, true, 0x7C011134},
+	/* C14 */ {true, 0x7c011100, 0x00600000, 0x00400000, true, 0x7C011134},
+	/* C15 */ {true, 0x7c011100, 0x00600000, 0x00600000, true, 0x7C011134},
+#if 0
+	/* C16 */ {false, 0, 0, 0, true, 0x7C050C50},
+	/* C17 */ {false, 0, 0, 0, true, 0x7C050C54},
+	/* C18 */ {false, 0, 0, 0, true, 0x7C050C58},
+	/* C18 */ {false, 0, 0, 0, true, 0x7C050C58},
+	/* C19 */ {false, 0, 0, 0, true, 0x7C050C5c},
+	/* C20 */ {false, 0, 0, 0, true, 0x7C050C60},
+	/* C21 */ {false, 0, 0, 0, true, 0x7C050C64},
+#endif
+	/* C22 */ {false, 0, 0, 0, true, 0x7C098000},
+	/* C23 */ {false, 0, 0, 0, true, 0x7C098050},
+	/* C24 */ {false, 0, 0, 0, true, 0x7C098054},
+	/* C25 */ {false, 0, 0, 0, true, 0x7C098058},
+	/* C26 */ {false, 0, 0, 0, true, 0x7C098108},
+	/* C27 */ {false, 0, 0, 0, true, 0x7C098004},
+	/* C28 */ {false, 0, 0, 0, true, 0x7C001620},
+	/* C29 */ {false, 0, 0, 0, true, 0x7C001610},
+	/* C30 */ {false, 0, 0, 0, true, 0x7C001600},
 };
 
-struct connv3_dump_list mt6639_dmp_list_pwr_c = {
+const struct connv3_dump_list mt6639_dmp_list_pwr_c = {
 	"power_c", sizeof(mt6639_pwr_c)/sizeof(struct connv3_dbg_command),
 	mt6639_pwr_c,
 };
 
-struct connv3_dbg_command mt6639_bus_a[] = {
-	{true, 0x7c02340c, 0x0, 0x00000000, false, 0x0},
+const struct connv3_dbg_command mt6639_bus_a[] = {
+	{true, 0x7c023408, 0x0, 0x00000000, false, 0x0},
 	{true, 0x7c02340c, 0x0, 0x00010001, true, 0x7c023404},
 	{true, 0x7c02340c, 0x0, 0x00020001, true, 0x7c023404},
 	{true, 0x7c02340c, 0x0, 0x00030001, true, 0x7c023404},
 	{true, 0x7c02340c, 0x0, 0x00010002, true, 0x7c023404},
-	{true, 0x7c02340c, 0x0, 0x00000003, true, 0x7c023404},
 	{true, 0x7c02340c, 0x0, 0x00010003, true, 0x7c023404},
 	{true, 0x7c02340c, 0x0, 0x00020003, true, 0x7c023404},
 	{true, 0x7c02340c, 0x0, 0x00030003, true, 0x7c023404},
+	{true, 0x7c02340c, 0x0, 0x00040003, true, 0x7c023404},
 	{true, 0x7c02340c, 0x0, 0x00010004, true, 0x7c023404},
 	{true, 0x7c02340c, 0x0, 0x00020004, true, 0x7c023404},
 	{true, 0x7c02340c, 0x0, 0x00030004, true, 0x7c023404},
@@ -83,12 +97,12 @@ struct connv3_dbg_command mt6639_bus_a[] = {
 	{false, 0, 0, 0, true, 0x7c00EA04},
 };
 
-struct connv3_dump_list mt6639_dmp_list_bus_a = {
+const struct connv3_dump_list mt6639_dmp_list_bus_a = {
 	"bus_a", sizeof(mt6639_bus_a)/sizeof(struct connv3_dbg_command),
 	mt6639_bus_a,
 };
 
-struct connv3_dbg_command mt6639_bus_b[] = {
+const struct connv3_dbg_command mt6639_bus_b[] = {
 	{false, 0x0, 0x0, 0x0, true, 0x7c02341c},
 	{false, 0x0, 0x0, 0x0, true, 0x7c023420},
 	{false, 0x0, 0x0, 0x0, true, 0x7c023424},
@@ -174,12 +188,12 @@ struct connv3_dbg_command mt6639_bus_b[] = {
 	{false, 0x0, 0x0, 0x0, true, 0x7c04831c},
 };
 
-struct connv3_dump_list mt6639_dmp_list_bus_b = {
+const struct connv3_dump_list mt6639_dmp_list_bus_b = {
 	"bus_b", sizeof(mt6639_bus_b)/sizeof(struct connv3_dbg_command),
 	mt6639_bus_b,
 };
 
-struct connv3_dbg_command mt6639_cfg_clk_a[] = {
+const struct connv3_dbg_command mt6639_cfg_clk_a[] = {
 	{false, 0x0, 0x0, 0x0, true, 0x7C060A00},
 	{false, 0x0, 0x0, 0x0, true, 0x7C060A0C},
 	{true, 0x7C06015c, 0x7, 0x0, true, 0x7C060a04},
@@ -198,20 +212,20 @@ struct connv3_dbg_command mt6639_cfg_clk_a[] = {
 	{true, 0x7C060160, 0xf, 0x5, true, 0x7C060a08},
 };
 
-struct connv3_dump_list mt6639_dmp_list_cfg_clk_a = {
+const struct connv3_dump_list mt6639_dmp_list_cfg_clk_a = {
 	"cfg_clk_a", sizeof(mt6639_cfg_clk_a)/sizeof(struct connv3_dbg_command),
 	mt6639_cfg_clk_a
 };
 
-struct connv3_dbg_command mt6639_cfg_clk_b[] = {
-	{false, 0x0, 0x0, 0x0, true, 0x7C023200},
-	{false, 0x0, 0x0, 0x0, true, 0x7C011130},
-	{true, 0x7C011100, 0x600000, 0x0, true, 0x7C011134},
-	{true, 0x7C011100, 0x600000, 0x200000, true, 0x7C011134},
-	{true, 0x7C011100, 0x600000, 0x400000, true, 0x7C011134},
-	{true, 0x7C011100, 0x600000, 0x600000, true, 0x7C011134},
-	{true, 0x7C01603C, 0x3f, 0x14, false, 0x0},
-	{true, 0x7C01603C, 0xfc0, 0x5c, false, 0x0},
+const struct connv3_dbg_command mt6639_cfg_clk_b[] = {
+	{false, 0x0, 0x0, 0x0, true, 0x7C023200}, /* B1 */
+	{false, 0x0, 0x0, 0x0, true, 0x7C011130}, /* B2 */
+	{true, 0x7C011100, 0x600000, 0x0, true, 0x7C011134}, /* B3 */
+	{true, 0x7C011100, 0x600000, 0x200000, true, 0x7C011134}, /* B4 */
+	{true, 0x7C011100, 0x600000, 0x400000, true, 0x7C011134}, /* B5 */
+	{true, 0x7C011100, 0x600000, 0x600000, true, 0x7C011134}, /* B6 */
+	{true, 0x7C01603C, 0x3f, 0x14, false, 0x0}, /* B7 */
+	{true, 0x7C01603C, 0xfc0, 0x5c0, false, 0x0},
 	{true, 0x7C01601C, 0x0, 0x03020100, false, 0x0},
 	{true, 0x7C016020, 0x0, 0x07060504, false, 0x0},
 	{true, 0x7C016024, 0x0, 0x0B0A0908, false, 0x0},
@@ -222,7 +236,7 @@ struct connv3_dbg_command mt6639_cfg_clk_b[] = {
 	{true, 0x7C016038, 0x0, 0x1F1E1D1C, false, 0x0},
 	{true, 0x7C016058, 0x2, 0x2, false, 0x0},
 	{false, 0x0, 0x0, 0x0, true, 0x7C023200},
-	{true, 0x7C01603C, 0x3f, 0x24, false, 0x0},
+	{true, 0x7C01603C, 0x3f, 0x24, false, 0x0}, /* B8 */
 	{true, 0x7C01601C, 0x0, 0x03020100, false, 0x0},
 	{true, 0x7C016020, 0x0, 0x07060504, false, 0x0},
 	{true, 0x7C016024, 0x0, 0x0B0A0908, false, 0x0},
@@ -235,10 +249,30 @@ struct connv3_dbg_command mt6639_cfg_clk_b[] = {
 	{false, 0x0, 0x0, 0x0, true, 0x7C023200},
 };
 
-struct connv3_dump_list mt6639_dmp_list_cfg_clk_b = {
+const struct connv3_dump_list mt6639_dmp_list_cfg_clk_b = {
 	"cfg_clk_b", sizeof(mt6639_cfg_clk_b)/sizeof(struct connv3_dbg_command),
 	mt6639_cfg_clk_b
 };
 
+/* Not in debug sop, add for extra information.
+ */
+const struct connv3_dbg_command mt6639_bus_extra[] = {
+	/* For RFSPI timeout */
+	/* 00 */ {false, 0x0, 0x0, 0x0, true, 0x7c012038},
+	/* 01 */ {false, 0x0, 0x0, 0x0, true, 0x7c01203c},
+	/* 02 */ {false, 0x0, 0x0, 0x0, true, 0x7c012080},
+	/* 03 */ {true, 0x7C023500, 0x0, 0xAEAA68, true, 0x7C023504},
+	/* 04 */ {false, 0x0, 0x0, 0x0, true, 0x7c011050},
+	/* 05 */ {false, 0x0, 0x0, 0x0, true, 0x7c011080},
+	/* 06 */ {false, 0x0, 0x0, 0x0, true, 0x7c011084},
+	/* 07 */ {false, 0x0, 0x0, 0x0, true, 0x7c049000},
+	/* For conn2ap timeout */
+	/* 08 */ {false, 0x0, 0x0, 0x0, true, 0x7c023C00},
+};
+
+const struct connv3_dump_list mt6639_dmp_list_bus_extra = {
+	"bus_extra", sizeof(mt6639_bus_extra)/sizeof(struct connv3_dbg_command),
+	mt6639_bus_extra
+};
 
 #endif
