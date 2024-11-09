@@ -76,10 +76,10 @@ $(info os option: $(os))
 # script for check the kernel version condition
 # example check kernel >= 5.4 : $(call kver_ge,5,4)
 kver_ge = $(shell \
-echo check_ver | awk '{if($(VERSION) < $(1)) {print 0} else { \
-if($(VERSION) > $(1)) {print 1} else { \
-if($(PATCHLEVEL) < $(2)) {print 0} else {print 1} \
-}}}' \
+  echo "$(VERSION) $(PATCHLEVEL)" | \
+  awk '{ \
+    if ($$1 == 5 && $$2 == 15) {print 1} else {print 0} \
+  }' \
 )
 
 # ---------------------------------------------------
