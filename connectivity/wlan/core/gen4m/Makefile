@@ -1,5 +1,4 @@
 ccflags-y :=
-CFG_DIR ?= $(src)/configs
 
 ifeq ($(CONFIG_MTK_PLATFORM),)
     CONFIG_MTK_PLATFORM := mt$(WLAN_CHIP_ID)
@@ -105,12 +104,6 @@ $(info $$CONFIG_WLAN_PLATFORM is [${CONFIG_WLAN_PLATFORM}])
 $(info $$WLAN_CHIP_ID is [${WLAN_CHIP_ID}])
 $(info $$MTK_COMBO_CHIP is [${MTK_COMBO_CHIP}])
 $(info $$WLAN_CONNAC3_DEV is [${WLAN_CONNAC3_DEV}])
-
-include $(CFG_DIR)/defconfig
-ifneq ($(wildcard $(CFG_DIR)/${MTK_COMBO_CHIP}/defconfig),)
-    include $(CFG_DIR)/${MTK_COMBO_CHIP}/defconfig
-endif
-
 
 ifneq ($(CONFIG_MTK_EMI_LEGACY),)
 ccflags-y += -DCONFIG_WLAN_MTK_EMI=1
@@ -541,14 +534,8 @@ endif
 # ===== Before is project setting =====
 ifeq ($(WM_RAM),ce)
     ccflags-y += -DCONFIG_WM_RAM_TYPE=1
-    ifneq ($(wildcard $(CFG_DIR)/${MTK_COMBO_CHIP}/ce/defconfig),)
-        include $(CFG_DIR)/${MTK_COMBO_CHIP}/ce/defconfig
-    endif
 else
     ccflags-y += -DCONFIG_WM_RAM_TYPE=0
-    ifneq ($(wildcard $(CFG_DIR)/${MTK_COMBO_CHIP}/mobile/defconfig),)
-        include $(CFG_DIR)/${MTK_COMBO_CHIP}/mobile/defconfig
-    endif
 endif
 # ===== Below will add compile flag based on project setting =====
 
