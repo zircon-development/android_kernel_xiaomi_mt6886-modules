@@ -7,6 +7,9 @@
 # Compile Options
 # ---------------------------------------------------
 
+BT_PLATFORM=6886
+LOG_TAG=[BT_Drv][btif]
+
 ifndef TOP
     TOP := $(srctree)/..
 endif
@@ -125,3 +128,15 @@ HIF_OBJS := btmtk_btif_main.o btmtk_queue.o
 $(MODULE_NAME)-objs  += $(CORE_OBJS)
 $(MODULE_NAME)-objs  += $(HIF_OBJS)
 $(MODULE_NAME)-objs  += $(CHIP_OBJS)
+
+extra_symbols := $(abspath $(O)/../mt6886-modules/connectivity/conninfra/Module.symvers)
+extra_symbols += $(abspath $(O)/../mt6886-modules/connectivity/connfem/Module.symvers)
+
+all:
+	$(MAKE) -C $(KERNEL_SRC) M=$(M) modules $(KBUILD_OPTIONS) KBUILD_EXTRA_SYMBOLS="$(extra_symbols)"
+
+modules_install:
+	$(MAKE) M=$(M) -C $(KERNEL_SRC) modules_install
+
+clean:
+	$(MAKE) -C $(KERNEL_SRC) M=$(M) clean
