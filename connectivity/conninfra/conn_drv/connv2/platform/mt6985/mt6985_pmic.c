@@ -31,7 +31,7 @@ const struct consys_platform_pmic_ops g_consys_platform_pmic_ops_mt6985 = {
 	.consys_pmic_gps_power_ctrl = consys_plt_pmic_gps_power_ctrl_mt6985,
 };
 
-static consys_plt_pmic_common_power_ctrl_mt6985(unsigned int enable)
+static int consys_plt_pmic_common_power_ctrl_mt6985(unsigned int enable)
 {
 	static bool setup = false;
 
