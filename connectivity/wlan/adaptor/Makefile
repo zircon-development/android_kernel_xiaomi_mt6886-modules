@@ -1,5 +1,5 @@
-extra_symbols := $(abspath $(O)/../vendor/mediatek/kernel_modules/connectivity/conninfra/Module.symvers)
-extra_symbols += $(abspath $(O)/../vendor/mediatek/kernel_modules/connectivity/common/Module.symvers)
+extra_symbols := $(abspath $(O)/../mt6886-modules/connectivity/conninfra/Module.symvers)
+extra_symbols += $(abspath $(O)/../mt6886-modules/connectivity/common/Module.symvers)
 
 $(info [wlan] WLAN_BUILD_COMMON=$(WLAN_BUILD_COMMON))
 
