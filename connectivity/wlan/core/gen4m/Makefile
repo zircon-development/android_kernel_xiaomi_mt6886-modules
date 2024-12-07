@@ -1,3 +1,11 @@
+CONFIG_MTK_COMBO_WIFI_HIF=axi
+MTK_ANDROID_EMI=y
+MTK_ANDROID_WMT=y
+MTK_COMBO_CHIP=CONNAC1X1_SOC7_0
+MTK_WLAN_SERVICE=yes
+WIFI_IP_SET=1
+WLAN_CHIP_ID=6886
+
 ccflags-y :=
 
 ifeq ($(CONFIG_MTK_PLATFORM),)
@@ -1283,9 +1291,7 @@ else
     ccflags-y += -DCFG_MTK_WIFI_AER_L05_RESET=0
 endif
 
-ifeq ($(MODULE_NAME),)
-MODULE_NAME := wlan_$(shell echo $(strip $(WLAN_CHIP_ID)) | tr A-Z a-z)_$(CONFIG_MTK_COMBO_WIFI_HIF)
-endif
+MODULE_NAME := wlan_drv_gen4m_$(WLAN_CHIP_ID)
 
 ifeq ($(CONFIG_MTK_COMBO_SLT), golden)
 slt_postfix = _mc
@@ -1954,3 +1960,16 @@ ifeq ($(WMT_SUPPORT), y)
 else
     ccflags-y += -Wframe-larger-than=2048
 endif
+
+extra_symbols += $(abspath $(O)/../mt6886-modules/connectivity/connfem/Module.symvers)
+extra_symbols += $(abspath $(O)/../mt6886-modules/connectivity/conninfra/Module.symvers)
+extra_symbols += $(abspath $(O)/../mt6886-modules/connectivity/wlan/adaptor/Module.symvers)
+
+all:
+	$(MAKE) -C $(KERNEL_SRC) M=$(M) modules $(KBUILD_OPTIONS) KBUILD_EXTRA_SYMBOLS="$(extra_symbols)"
+
+modules_install:
+	$(MAKE) M=$(M) -C $(KERNEL_SRC) modules_install
+
+clean:
+	$(MAKE) -C $(KERNEL_SRC) M=$(M) clean
